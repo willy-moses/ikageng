@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Register New Group</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;
+    --text:#dff0eb;--muted:#6b8c84;--green:#2c5530;--sup:#d4a574;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:0 0 4rem;}
+
+  .header{background:var(--green);padding:1.2rem 1.5rem;display:flex;align-items:center;gap:1rem;}
+  .back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.45rem 1rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.72rem;font-weight:500;transition:background .15s;}
+  .back-btn:hover{background:rgba(255,255,255,.28);}
+  .header-text{display:flex;flex-direction:column;gap:.15rem;}
+  .header h1{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:#fff;}
+  .header-project{font-size:.65rem;color:rgba(255,255,255,.6);letter-spacing:.1em;text-transform:uppercase;}
+
+  .page{max-width:720px;margin:0 auto;padding:1.5rem;}
+
+  .project-banner{background:rgba(0,201,138,.06);border:1px solid rgba(0,201,138,.2);border-left:3px solid var(--accent);border-radius:8px;padding:.85rem 1.1rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:.75rem;}
+  .project-banner-icon{font-size:1.1rem;}
+  .project-banner-info{flex:1;}
+  .project-banner-label{font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem;}
+  .project-banner-name{font-size:.9rem;color:var(--accent);font-weight:500;}
+  .project-banner-meta{font-size:.65rem;color:var(--muted);margin-top:.15rem;}
+
+  .no-project-warning{background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.3);border-left:3px solid var(--red);border-radius:8px;padding:.85rem 1.1rem;margin-bottom:1.2rem;font-size:.78rem;color:var(--red);}
+
+  .section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.4rem 1.5rem;margin-bottom:1.2rem;}
+  .section-title{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:700;color:var(--accent);margin-bottom:1.1rem;}
+
+  .sup-bar{background:rgba(212,165,116,.08);border-left:3px solid var(--sup);border-radius:0 6px 6px 0;padding:.65rem 1rem;margin-bottom:1rem;font-size:.75rem;color:var(--sup);display:none;}
+
+  .autofill-banner{background:rgba(212,165,116,.07);border:1px solid rgba(212,165,116,.3);border-radius:8px;padding:.65rem 1rem;margin-bottom:.9rem;font-size:.67rem;color:var(--sup);display:none;align-items:center;gap:.5rem;line-height:1.6;}
+  .autofill-banner b{color:var(--text);font-weight:400;}
+
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;}
+  .form-group{display:flex;flex-direction:column;gap:.32rem;margin-bottom:.85rem;}
+  .form-group label{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
+  input[type="text"],input[type="tel"]{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.8rem;padding:.55rem .85rem;border-radius:6px;outline:none;width:100%;transition:border-color .2s;}
+  input:focus,input:hover{border-color:var(--accent);}
+  input.err {border-color:var(--red)!important;background:rgba(240,96,96,.06);}
+  input.warn{border-color:var(--gold)!important;background:rgba(232,184,75,.06);}
+  input[readonly]{opacity:.5;cursor:not-allowed;}
+  input[readonly]:hover{border-color:var(--border);}
+
+  .err-text  {font-size:.65rem;color:var(--red);font-weight:500;margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+  .warn-text {font-size:.65rem;color:var(--gold);font-weight:500;margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+  .check-text{font-size:.65rem;color:var(--blue);font-style:italic;margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+  .ok-text   {font-size:.65rem;color:var(--accent);margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+  .dup-name-err{font-size:.65rem;color:var(--red);font-weight:500;margin-top:-.6rem;margin-bottom:.5rem;display:none;}
+
+  .phone-check-text{font-size:.65rem;color:var(--blue);font-style:italic;margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+  .phone-err-text  {font-size:.65rem;color:var(--red);font-weight:500;margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+  .phone-ok-text   {font-size:.65rem;color:var(--accent);margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+
+  .pills{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:.85rem;}
+  .pill{padding:.35rem .85rem;border:1px solid var(--border);border-radius:20px;background:var(--s2);font-size:.72rem;cursor:pointer;color:var(--muted);transition:all .15s;user-select:none;}
+  .pill:hover{border-color:var(--accent);color:var(--accent);}
+  .pill.active{background:var(--accent);border-color:var(--accent);color:#001a10;font-weight:500;}
+  .pill.locked{opacity:.55;cursor:not-allowed;pointer-events:none;}
+  .pill.locked.active{background:var(--blue);border-color:var(--blue);color:#001820;}
+  .sex-auto-note{font-size:.6rem;color:var(--blue);font-style:italic;margin-top:-.6rem;margin-bottom:.5rem;display:none;}
+
+  .btn{border:none;font-family:'DM Mono',monospace;font-size:.72rem;font-weight:500;padding:.55rem 1.2rem;border-radius:6px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:opacity .2s,transform .1s;}
+  .btn:active{transform:scale(.97);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .btn-add{background:var(--blue);color:#001820;width:100%;padding:.75rem;margin-top:.4rem;font-size:.76rem;}
+  .btn-add:hover:not(:disabled){opacity:.85;}
+  .btn-save{background:var(--accent);color:#001a10;width:100%;padding:.85rem;margin-top:1.1rem;font-size:.8rem;}
+  .btn-save:hover:not(:disabled){opacity:.85;}
+
+  .member-card{display:flex;justify-content:space-between;align-items:flex-start;padding:1rem 1.1rem;background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;margin-bottom:.75rem;gap:.75rem;}
+  .member-card.supervisor{border-left-color:var(--sup);background:rgba(212,165,116,.04);}
+  .member-name{font-size:.88rem;font-weight:500;color:var(--text);display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;}
+  .sup-badge{background:var(--sup);color:#1a0d00;font-size:.55rem;font-weight:700;padding:.15rem .55rem;border-radius:10px;letter-spacing:.08em;text-transform:uppercase;}
+  .member-detail{font-size:.65rem;color:var(--muted);margin-top:.2rem;line-height:1.6;}
+  .card-actions{display:flex;flex-direction:column;gap:.4rem;align-items:flex-end;flex-shrink:0;}
+  .action-btn{padding:.3rem .7rem;border-radius:4px;font-size:.6rem;font-weight:500;border:1px solid var(--border);cursor:pointer;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em;transition:all .15s;background:transparent;color:var(--muted);white-space:nowrap;}
+  .action-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .action-btn.sup-active{background:var(--sup);border-color:var(--sup);color:#1a0d00;}
+  .action-btn.edit  {background:rgba(79,192,212,.1);border-color:var(--blue);color:var(--blue);}
+  .action-btn.remove{background:rgba(240,96,96,.08);border-color:var(--red);color:var(--red);}
+  .empty{text-align:center;padding:2.5rem;color:var(--muted);font-size:.78rem;font-style:italic;}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:50;align-items:center;justify-content:center;padding:1rem;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.6rem 1.8rem;width:min(520px,95vw);max-height:88vh;overflow-y:auto;animation:slideUp .2s ease;}
+  @keyframes slideUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  .modal-title{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:700;color:var(--accent);text-align:center;margin-bottom:1.3rem;}
+  .modal-btns{display:flex;gap:.75rem;margin-top:1.3rem;}
+  .modal-cancel{flex:1;padding:.65rem;background:transparent;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--muted);font-family:'DM Mono',monospace;font-size:.75rem;transition:all .15s;}
+  .modal-cancel:hover{border-color:var(--accent);color:var(--accent);}
+  .modal-save{flex:1;padding:.65rem;background:var(--accent);border:none;border-radius:6px;cursor:pointer;color:#001a10;font-family:'DM Mono',monospace;font-size:.75rem;font-weight:500;}
+  .modal-save:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+
+  .e-phone-check-text{font-size:.65rem;color:var(--blue);font-style:italic;margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+  .e-phone-err-text  {font-size:.65rem;color:var(--red);font-weight:500;margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+  .e-phone-ok-text   {font-size:.65rem;color:var(--accent);margin-top:-.5rem;margin-bottom:.4rem;display:none;}
+
+  .saving-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:1rem;}
+  .saving-overlay.open{display:flex;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .saving-text{font-size:.8rem;color:var(--text);letter-spacing:.1em;}
+
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1.2rem;font-size:.75rem;color:var(--text);z-index:999;animation:fadeIn .2s ease;max-width:300px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error  {border-color:rgba(240,96,96,.4);color:var(--red);}
+  .toast.info   {border-color:rgba(79,192,212,.4);color:var(--blue);}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  @media(max-width:520px){.form-row{grid-template-columns:1fr;}.member-card{flex-direction:column;}.card-actions{flex-direction:row;flex-wrap:wrap;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="goBack()">← Back</button>
+  <div class="header-text">
+    <h1>Register New Group</h1>
+    <div class="header-project" id="headerProjectLabel">Loading project…</div>
+  </div>
+</div>
+
+<div class="saving-overlay" id="savingOverlay">
+  <div class="spinner"></div>
+  <div class="saving-text" id="savingText">Saving group…</div>
+</div>
+
+<div class="page">
+
+  <div class="project-banner" id="projectBanner" style="display:none">
+    <div class="project-banner-icon">📁</div>
+    <div class="project-banner-info">
+      <div class="project-banner-label">Registering group under project</div>
+      <div class="project-banner-name" id="bannerProjectName">—</div>
+      <div class="project-banner-meta" id="bannerProjectMeta"></div>
+    </div>
+  </div>
+
+  <div class="no-project-warning" id="noProjectWarning" style="display:none">
+    ⚠ No project selected. Please open a project from the dashboard before registering a group.
+  </div>
+
+  <div class="sup-bar" id="supBar"></div>
+
+  <!-- Group Info -->
+  <div class="section">
+    <div class="section-title">Group Information</div>
+    <div class="form-group">
+      <label>Group Name *</label>
+      <input type="text" id="groupName" placeholder="e.g., Ghanzi Village Group A" oninput="checkGroupName()">
+      <div class="dup-name-err" id="groupNameErr">⚠ This group name already exists in this project</div>
+    </div>
+    <div class="form-group">
+      <label>Location *</label>
+      <input type="text" id="location" placeholder="e.g., Ghanzi Village">
+    </div>
+  </div>
+
+  <!-- Add Member -->
+  <div class="section">
+    <div class="section-title">Add New Member</div>
+
+    <div class="autofill-banner" id="autofillBanner">
+      <span>↩</span>
+      <span id="autofillBannerText">Worker found — fields filled automatically</span>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Omang Number *</label>
+        <input type="text" id="omang" placeholder="123 456 789" maxlength="11" oninput="handleOmang(this)">
+        <div class="check-text" id="omangChecking">Checking…</div>
+        <div class="warn-text"  id="omangWarn">Must be exactly 9 digits</div>
+        <div class="err-text"   id="omangErr"></div>
+        <div class="ok-text"    id="omangOkText">✓ Omang available in this project</div>
+      </div>
+      <div class="form-group">
+        <label>Surname *</label>
+        <input type="text" id="surname" placeholder="Surname">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>First Name *</label>
+        <input type="text" id="firstName" placeholder="First Name">
+      </div>
+      <div class="form-group">
+        <label>Date of Birth *</label>
+        <input type="text" id="dob" placeholder="YYYY-MM-DD">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phone Number *</label>
+        <input type="tel" id="phone" placeholder="71234567" maxlength="8" oninput="handlePhone(this)">
+        <div class="phone-check-text" id="phoneChecking">Checking…</div>
+        <div class="phone-err-text"   id="phoneErr"></div>
+        <div class="phone-ok-text"    id="phoneOkText">✓ Phone available in this project</div>
+      </div>
+      <div class="form-group">
+        <label>Sex *</label>
+        <div class="pills" style="margin-top:.3rem">
+          <div class="pill active" id="sex-M" onclick="setSex('M')">Male</div>
+          <div class="pill"        id="sex-F" onclick="setSex('F')">Female</div>
+        </div>
+        <div class="sex-auto-note" id="sexAutoNote">⚡ Auto-detected from omang</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Mobile Money Provider *</label>
+      <div class="pills">
+        <div class="pill active" id="mm-smega"  onclick="setMM('smega')">Smega</div>
+        <div class="pill"        id="mm-orange" onclick="setMM('orange')">Orange Money</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Qualification *</label>
+      <div class="pills" id="qualPills"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Position</label>
+      <div class="pills">
+        <div class="pill" id="supToggle" onclick="toggleSupervisor()">Register as Supervisor</div>
+      </div>
+    </div>
+
+    <button class="btn btn-add" id="addBtn" onclick="addMember()" disabled>+ Add Member to Group</button>
+  </div>
+
+  <!-- Members List -->
+  <div class="section">
+    <div class="section-title" id="membersTitle">Group Members (0)</div>
+    <div id="membersList"><div class="empty">No members added yet.<br>Fill in the form above to get started.</div></div>
+    <button class="btn btn-save" id="saveBtn" onclick="saveGroup()" disabled>💾 Save Group to Supabase</button>
+  </div>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">Edit Member</div>
+    <div class="form-group">
+      <label>Omang Number *</label>
+      <input type="text" id="e-omang" placeholder="123 456 789" maxlength="11" oninput="handleEditOmang(this)">
+      <div class="err-text" id="e-omangErr"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Surname *</label><input type="text" id="e-surname"></div>
+      <div class="form-group"><label>First Name *</label><input type="text" id="e-firstName"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Date of Birth *</label><input type="text" id="e-dob" placeholder="YYYY-MM-DD"></div>
+      <div class="form-group">
+        <label>Phone Number *</label>
+        <input type="tel" id="e-phone" maxlength="8" oninput="handleEditPhone(this)">
+        <div class="e-phone-check-text" id="e-phoneChecking">Checking…</div>
+        <div class="e-phone-err-text"   id="e-phoneErr"></div>
+        <div class="e-phone-ok-text"    id="e-phoneOkText">✓ Phone available</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Sex *</label>
+      <div class="pills">
+        <div class="pill" id="e-sex-M" onclick="setEditSex('M')">Male</div>
+        <div class="pill" id="e-sex-F" onclick="setEditSex('F')">Female</div>
+      </div>
+      <div class="sex-auto-note" id="e-sexAutoNote">⚡ Auto-detected from omang</div>
+    </div>
+    <div class="form-group">
+      <label>Mobile Money Provider *</label>
+      <div class="pills">
+        <div class="pill" id="e-mm-smega"  onclick="setEditMM('smega')">Smega</div>
+        <div class="pill" id="e-mm-orange" onclick="setEditMM('orange')">Orange Money</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Qualification *</label>
+      <div class="pills" id="e-qualPills"></div>
+    </div>
+    <div class="form-group">
+      <label>Position</label>
+      <div class="pills">
+        <div class="pill" id="e-supToggle" onclick="toggleEditSupervisor()">Supervisor</div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeEdit()">Cancel</button>
+      <button class="modal-save" id="editSaveBtn" onclick="updateMember()">Update Member</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const QUALS = ['PSLE','JC','BGCSE','Certificate','Diploma','Degree','Master Degree'];
+
+const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+let projectInfo  = null;
+
+let members   = [];
+let form      = { sex:'M', mm:'smega', qual:'PSLE', isSup:false };
+let editForm  = { sex:'M', mm:'smega', qual:'PSLE', isSup:false };
+let editingId = null;
+
+let omangTimer  = null;
+let omangOk     = false;
+let phoneTimer  = null;
+let phoneOk     = false;
+let editPhoneTimer = null;
+let editPhoneOk    = false;
+
+let existingGroupNames = [];
+let projectOmangs = new Set();
+let projectPhones = new Set();
+let omangInfoMap  = {};
+let phoneInfoMap  = {};
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  if (!PROJECT_ID) {
+    document.getElementById('noProjectWarning').style.display = 'block';
+    document.getElementById('headerProjectLabel').textContent = 'No project selected';
+    document.getElementById('saveBtn').disabled = true;
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('projects')
+    .select('project_name, month, year, description')
+    .eq('id', PROJECT_ID)
+    .single();
+
+  if (error || !data) {
+    document.getElementById('noProjectWarning').style.display = 'block';
+    document.getElementById('noProjectWarning').textContent = '⚠ Could not load project. Please go back and try again.';
+    document.getElementById('headerProjectLabel').textContent = 'Project not found';
+    return;
+  }
+
+  projectInfo = data;
+  document.getElementById('headerProjectLabel').textContent =
+    `${data.project_name} · ${data.month} ${data.year}`;
+  document.getElementById('bannerProjectName').textContent = data.project_name;
+  document.getElementById('bannerProjectMeta').textContent =
+    `${data.month} ${data.year}${data.description ? ' · ' + data.description : ''}`;
+  document.getElementById('projectBanner').style.display = 'flex';
+
+  await Promise.all([loadGroupNames(), loadProjectMemberData()]);
+}
+
+async function loadGroupNames() {
+  const { data } = await sb.from('groups').select('group_name').eq('project_id', PROJECT_ID);
+  existingGroupNames = (data || []).map(g => g.group_name.toLowerCase());
+}
+
+async function loadProjectMemberData() {
+  projectOmangs = new Set();
+  projectPhones = new Set();
+  phoneInfoMap  = {};
+  omangInfoMap  = {};
+
+  const { data: groups } = await sb.from('groups').select('id, group_name').eq('project_id', PROJECT_ID);
+  if (!groups || groups.length === 0) return;
+
+  const groupNameById = {};
+  groups.forEach(g => { groupNameById[g.id] = g.group_name; });
+  const groupIds = groups.map(g => g.id);
+
+  const PAGE = 1000;
+  let from = 0;
+  while (true) {
+    const { data: rows } = await sb
+      .from('members')
+      .select('omang_number, cellphone_number, first_name, surname, group_id')
+      .in('group_id', groupIds)
+      .range(from, from + PAGE - 1);
+
+    if (!rows || rows.length === 0) break;
+    rows.forEach(r => {
+      const name      = `${r.first_name} ${r.surname}`;
+      const groupName = groupNameById[r.group_id] || 'another group';
+      if (r.omang_number) {
+        const o = r.omang_number.trim();
+        projectOmangs.add(o);
+        omangInfoMap[o] = { name, groupName };
+      }
+      if (r.cellphone_number) {
+        const p = r.cellphone_number.trim();
+        projectPhones.add(p);
+        phoneInfoMap[p] = { name, groupName };
+      }
+    });
+    if (rows.length < PAGE) break;
+    from += PAGE;
+  }
+}
+
+// ── Sex detection ──────────────────────────────────────────────────────────
+function detectSexFromOmang(raw) {
+  const d = (raw||'').charAt(4);
+  if (d==='1') return 'M';
+  if (d==='2') return 'F';
+  return null;
+}
+
+function applySexDetection(raw) {
+  const det = detectSexFromOmang(raw);
+  const mP = document.getElementById('sex-M'), fP = document.getElementById('sex-F');
+  const note = document.getElementById('sexAutoNote');
+  if (det) {
+    form.sex = det;
+    mP.classList.toggle('active', det==='M'); fP.classList.toggle('active', det==='F');
+    mP.classList.add('locked'); fP.classList.add('locked');
+    note.style.display = 'block';
+  } else {
+    mP.classList.remove('locked'); fP.classList.remove('locked');
+    note.style.display = 'none';
+  }
+}
+
+function applyEditSexDetection(raw) {
+  const det = detectSexFromOmang(raw);
+  const mP = document.getElementById('e-sex-M'), fP = document.getElementById('e-sex-F');
+  const note = document.getElementById('e-sexAutoNote');
+  if (det) {
+    editForm.sex = det;
+    mP.classList.toggle('active', det==='M'); fP.classList.toggle('active', det==='F');
+    mP.classList.add('locked'); fP.classList.add('locked');
+    note.style.display = 'block';
+  } else {
+    mP.classList.remove('locked'); fP.classList.remove('locked');
+    note.style.display = 'none';
+  }
+}
+
+// ── Omang helpers ──────────────────────────────────────────────────────────
+function formatOmang(v) {
+  const d = v.replace(/\D/g,'').substring(0,9);
+  let r=''; for(let i=0;i<d.length;i++){if(i>0&&i%3===0)r+=' ';r+=d[i];} return r;
+}
+function rawOmang(v)   { return (v||'').replace(/\s/g,''); }
+function validOmang(v) { const r=rawOmang(v); return r.length===9&&/^\d{9}$/.test(r); }
+
+// ── Autofill: check worker_archive first, then waiting_list, then project_archive ──
+async function tryAutofill(omang) {
+  let src = null;
+  let sourceLabel = '';
+
+  console.log('[autofill] starting for omang:', omang);
+
+  // 1. Try worker_archive
+  try {
+    const { data, error } = await sb
+      .from('worker_archive')
+      .select('omang_number,surname,first_name,date_of_birth,cellphone_number,sex,mobile_money_provider,qualification')
+      .eq('omang_number', omang)
+      .limit(1);
+
+    console.log('[autofill] worker_archive →', { data, error });
+    if (!error && data && data.length > 0) {
+      src = data[0];
+      sourceLabel = 'worker archive';
+    }
+  } catch(e) {
+    console.warn('[autofill] worker_archive exception:', e);
+  }
+
+  // 2. Fall back to waiting_list
+  if (!src) {
+    try {
+      const { data, error } = await sb
+        .from('waiting_list')
+        .select('omang_number,surname,first_name,date_of_birth,cellphone_number,sex,mobile_money_provider,qualification')
+        .eq('omang_number', omang)
+        .limit(1);
+
+      console.log('[autofill] waiting_list →', { data, error });
+      if (!error && data && data.length > 0) {
+        src = data[0];
+        sourceLabel = 'waiting list';
+      }
+    } catch(e) {
+      console.warn('[autofill] waiting_list exception:', e);
+    }
+  }
+
+  // 3. Fall back to project_archive
+  if (!src) {
+    try {
+      const { data, error } = await sb
+        .from('project_archive')
+        .select('omang_number,surname,first_name,date_of_birth,cellphone_number,sex,mobile_money_provider,qualification')
+        .eq('omang_number', omang)
+        .order('archived_at', { ascending: false })
+        .limit(1);
+
+      console.log('[autofill] project_archive →', { data, error });
+      if (!error && data && data.length > 0) {
+        src = data[0];
+        sourceLabel = 'project archive';
+      }
+    } catch(e) {
+      console.warn('[autofill] project_archive exception:', e);
+    }
+  }
+
+  console.log('[autofill] final src:', src, '| label:', sourceLabel);
+  if (!src) return; // worker is truly new
+
+  // Fill text fields
+  document.getElementById('surname').value   = src.surname          || '';
+  document.getElementById('firstName').value = src.first_name       || '';
+  document.getElementById('dob').value       = src.date_of_birth    || '';
+  document.getElementById('phone').value     = src.cellphone_number || '';
+
+  // Sex: omang digit is authoritative, then stored value
+  const detectedSex = detectSexFromOmang(omang) || src.sex || 'M';
+  form.sex = detectedSex;
+  document.getElementById('sex-M').classList.toggle('active', detectedSex === 'M');
+  document.getElementById('sex-F').classList.toggle('active', detectedSex === 'F');
+  const omangHasSex = !!detectSexFromOmang(omang);
+  document.getElementById('sex-M').classList.toggle('locked', omangHasSex);
+  document.getElementById('sex-F').classList.toggle('locked', omangHasSex);
+  document.getElementById('sexAutoNote').style.display = omangHasSex ? 'block' : 'none';
+
+  // MMP and qualification
+  if (src.mobile_money_provider) setMM(src.mobile_money_provider);
+  if (src.qualification)         setQual(src.qualification);
+
+  // Trigger phone dup check with filled phone
+  const phone = document.getElementById('phone').value.trim();
+  if (phone) handlePhone(document.getElementById('phone'));
+  else phoneOk = true;
+
+  document.getElementById('autofillBannerText').innerHTML =
+    `<b>${src.first_name} ${src.surname}</b> — found in ${sourceLabel}, fields filled automatically`;
+  document.getElementById('autofillBanner').style.display = 'flex';
+
+  showToast(`${src.first_name} ${src.surname} — loaded from ${sourceLabel} ✓`, 'info');
+  updateAddBtn();
+}
+
+// ── Omang input ────────────────────────────────────────────────────────────
+function handleOmang(el) {
+  el.value = formatOmang(el.value);
+  const raw = rawOmang(el.value);
+
+  hide('omangErr'); hide('omangChecking'); hide('omangOkText');
+  document.getElementById('autofillBanner').style.display = 'none';
+  const hasInput = el.value.length > 0;
+  const invalid  = hasInput && !validOmang(el.value);
+  show('omangWarn', invalid);
+  el.classList.toggle('warn', invalid);
+  el.classList.remove('err');
+  clearTimeout(omangTimer);
+  omangOk = false;
+
+  applySexDetection(raw.length >= 4 ? raw : '');
+  updateAddBtn();
+  if (!validOmang(el.value)) return;
+  hide('omangWarn');
+  show('omangChecking');
+  omangTimer = setTimeout(() => checkOmangDup(raw), 600);
+}
+
+async function checkOmangDup(raw) {
+  hide('omangChecking');
+
+  // 1. Local form list
+  const localDup = members.find(m => m.omang === raw);
+  if (localDup) {
+    showFieldErr('omangErr', `Already added in this form: ${localDup.firstName} ${localDup.surname}`);
+    document.getElementById('omang').classList.add('err');
+    omangOk = false; updateAddBtn(); return;
+  }
+
+  // 2. Existing project members
+  if (projectOmangs.has(raw)) {
+    const info = omangInfoMap[raw];
+    showFieldErr('omangErr', info
+      ? `Already in this project: ${info.name} — ${info.groupName}`
+      : 'This Omang already exists in this project');
+    document.getElementById('omang').classList.add('err');
+    omangOk = false; updateAddBtn(); return;
+  }
+
+  // 3. Omang clear — show ok + attempt autofill
+  show('omangOkText');
+  document.getElementById('omang').classList.remove('err');
+  omangOk = true;
+
+  await tryAutofill(raw);
+
+  updateAddBtn();
+}
+
+function handleEditOmang(el) {
+  el.value = formatOmang(el.value);
+  const raw = rawOmang(el.value);
+  hide('e-omangErr');
+  applyEditSexDetection(raw.length >= 4 ? raw : '');
+}
+
+// ── Phone input ────────────────────────────────────────────────────────────
+function handlePhone(el) {
+  const val = el.value.trim();
+  hide('phoneErr'); hide('phoneChecking'); hide('phoneOkText');
+  el.classList.remove('err');
+  clearTimeout(phoneTimer);
+  phoneOk = false;
+
+  if (!val) { phoneOk = true; updateAddBtn(); return; }
+
+  const localDup = members.find(m => m.phone === val);
+  if (localDup) {
+    showElemErr('phoneErr', `Already added in this form: ${localDup.firstName} ${localDup.surname}`);
+    el.classList.add('err'); updateAddBtn(); return;
+  }
+
+  show('phoneChecking');
+  phoneTimer = setTimeout(() => checkPhoneDup(val, el), 600);
+}
+
+async function checkPhoneDup(val, el) {
+  hide('phoneChecking');
+
+  if (projectPhones.has(val)) {
+    const info = phoneInfoMap[val];
+    showElemErr('phoneErr', info
+      ? `Phone belongs to ${info.name} — ${info.groupName}`
+      : 'This phone number already exists in this project');
+    el.classList.add('err');
+    phoneOk = false; updateAddBtn(); return;
+  }
+
+  show('phoneOkText');
+  el.classList.remove('err');
+  phoneOk = true; updateAddBtn();
+}
+
+// ── Edit modal phone check ─────────────────────────────────────────────────
+function handleEditPhone(el) {
+  const val = el.value.trim();
+  hide('e-phoneErr'); hide('e-phoneChecking'); hide('e-phoneOkText');
+  el.classList.remove('err');
+  clearTimeout(editPhoneTimer);
+  editPhoneOk = false;
+
+  if (!val) { editPhoneOk = true; return; }
+
+  const localDup = members.find(m => m.phone === val && m.id !== editingId);
+  if (localDup) {
+    showElemErr('e-phoneErr', `Already added in this form: ${localDup.firstName} ${localDup.surname}`);
+    el.classList.add('err'); return;
+  }
+
+  showElem('e-phoneChecking');
+  editPhoneTimer = setTimeout(() => checkEditPhoneDup(val, el), 600);
+}
+
+async function checkEditPhoneDup(val, el) {
+  hideElem('e-phoneChecking');
+  const editingMember = members.find(m => m.id === editingId);
+  if (editingMember && editingMember.phone === val) {
+    showElem('e-phoneOkText'); editPhoneOk = true; return;
+  }
+  if (projectPhones.has(val)) {
+    const info = phoneInfoMap[val];
+    showElemErr('e-phoneErr', info
+      ? `Phone belongs to ${info.name} — ${info.groupName}`
+      : 'Phone already exists in this project');
+    el.classList.add('err'); editPhoneOk = false; return;
+  }
+  showElem('e-phoneOkText'); el.classList.remove('err'); editPhoneOk = true;
+}
+
+// ── Group name check ───────────────────────────────────────────────────────
+function checkGroupName() {
+  const v = document.getElementById('groupName').value.trim().toLowerCase();
+  const dup = v && existingGroupNames.includes(v);
+  document.getElementById('groupNameErr').style.display = dup ? 'block' : 'none';
+  updateSaveBtn();
+}
+
+// ── Pill selectors ─────────────────────────────────────────────────────────
+function setSex(v) {
+  if (document.getElementById('sex-M').classList.contains('locked')) return;
+  form.sex = v; toggle2('sex-M','sex-F', v==='M');
+}
+function setMM(v)      { form.mm=v;    toggle2('mm-smega','mm-orange',v==='smega'); }
+function setQual(v)    { form.qual=v;  renderQuals('qualPills',v,setQual); }
+function setEditSex(v) {
+  if (document.getElementById('e-sex-M').classList.contains('locked')) return;
+  editForm.sex=v; toggle2('e-sex-M','e-sex-F',v==='M');
+}
+function setEditMM(v)  { editForm.mm=v;   toggle2('e-mm-smega','e-mm-orange',v==='smega'); }
+function setEditQual(v){ editForm.qual=v; renderQuals('e-qualPills',v,setEditQual); }
+
+function toggle2(a,b,aActive) {
+  document.getElementById(a).classList.toggle('active', aActive);
+  document.getElementById(b).classList.toggle('active', !aActive);
+}
+function renderQuals(containerId, selected, setter) {
+  document.getElementById(containerId).innerHTML = QUALS.map(q =>
+    `<div class="pill${q===selected?' active':''}" onclick="(${setter.name})('${q}')">${q}</div>`
+  ).join('');
+}
+
+// ── Supervisor toggle ──────────────────────────────────────────────────────
+function toggleSupervisor() {
+  const sup = members.find(m => m.isSup);
+  if (sup && !form.isSup) { showToast('Supervisor already assigned: '+sup.firstName+' '+sup.surname,'error'); return; }
+  form.isSup = !form.isSup;
+  document.getElementById('supToggle').classList.toggle('active', form.isSup);
+}
+function toggleEditSupervisor() {
+  const sup = members.find(m => m.isSup && m.id !== editingId);
+  if (sup && !editForm.isSup) { showToast('Supervisor already assigned: '+sup.firstName+' '+sup.surname,'error'); return; }
+  editForm.isSup = !editForm.isSup;
+  document.getElementById('e-supToggle').classList.toggle('active', editForm.isSup);
+}
+
+// ── Button state ───────────────────────────────────────────────────────────
+function updateAddBtn() {
+  const omangVal  = document.getElementById('omang').value;
+  const surname   = document.getElementById('surname').value.trim();
+  const firstName = document.getElementById('firstName').value.trim();
+  const dob       = document.getElementById('dob').value.trim();
+  document.getElementById('addBtn').disabled =
+    !validOmang(omangVal) || !omangOk || !surname || !firstName || !dob || !phoneOk;
+}
+function updateSaveBtn() {
+  if (!PROJECT_ID) { document.getElementById('saveBtn').disabled = true; return; }
+  const gn  = document.getElementById('groupName').value.trim();
+  const loc = document.getElementById('location').value.trim();
+  const dup = existingGroupNames.includes(gn.toLowerCase());
+  document.getElementById('saveBtn').disabled = !gn || !loc || members.length === 0 || dup;
+}
+
+// ── Add member ─────────────────────────────────────────────────────────────
+function addMember() {
+  const surname   = document.getElementById('surname').value.trim();
+  const firstName = document.getElementById('firstName').value.trim();
+  const dob       = document.getElementById('dob').value.trim();
+  const phone     = document.getElementById('phone').value.trim();
+  const omang     = document.getElementById('omang').value;
+  if (!surname||!firstName||!dob) { showToast('Please fill in all required fields','error'); return; }
+
+  const m = {
+    id: 'tmp_'+Date.now()+'_'+Math.random().toString(36).substr(2,5),
+    omang: rawOmang(omang), surname, firstName, dob, phone,
+    sex: form.sex, mm: form.mm, qual: form.qual, isSup: form.isSup,
+    order: members.length + 1
+  };
+  members.push(m);
+
+  projectOmangs.add(m.omang);
+  omangInfoMap[m.omang] = { name:`${firstName} ${surname}`, groupName:'this form' };
+  if (phone) {
+    projectPhones.add(phone);
+    phoneInfoMap[phone] = { name:`${firstName} ${surname}`, groupName:'this form' };
+  }
+
+  resetAddForm();
+  renderMembers();
+  updateSaveBtn();
+  showToast(`${firstName} ${surname} added`);
+}
+
+function resetAddForm() {
+  ['omang','surname','firstName','dob','phone'].forEach(id => document.getElementById(id).value='');
+  ['omangErr','omangWarn','omangChecking','omangOkText',
+   'phoneErr','phoneChecking','phoneOkText'].forEach(hide);
+  document.getElementById('autofillBanner').style.display = 'none';
+  form = { sex:'M', mm:'smega', qual:'PSLE', isSup:false };
+  setSex('M'); setMM('smega'); setQual('PSLE');
+  document.getElementById('supToggle').classList.remove('active');
+  document.getElementById('omang').classList.remove('err','warn');
+  document.getElementById('phone').classList.remove('err');
+  document.getElementById('sex-M').classList.remove('locked');
+  document.getElementById('sex-F').classList.remove('locked');
+  document.getElementById('sexAutoNote').style.display = 'none';
+  omangOk = false;
+  phoneOk = true;
+  updateAddBtn();
+}
+
+// ── Render member cards ────────────────────────────────────────────────────
+function renderMembers() {
+  const sorted = [...members].sort((a,b) => {
+    if (a.isSup && !b.isSup) return -1;
+    if (!a.isSup && b.isSup) return 1;
+    return a.order - b.order;
+  });
+  const sup = members.find(m => m.isSup);
+  document.getElementById('membersTitle').textContent =
+    `Group Members (${members.length})${sup ? ' • 1 Supervisor' : ''}`;
+
+  const bar = document.getElementById('supBar');
+  if (sup) { bar.textContent='Supervisor: '+sup.firstName+' '+sup.surname; bar.style.display='block'; }
+  else bar.style.display='none';
+
+  if (!members.length) {
+    document.getElementById('membersList').innerHTML =
+      '<div class="empty">No members added yet.<br>Fill in the form above to get started.</div>';
+    return;
+  }
+  document.getElementById('membersList').innerHTML = sorted.map(m => `
+    <div class="member-card${m.isSup?' supervisor':''}">
+      <div style="flex:1">
+        <div class="member-name">
+          ${m.firstName} ${m.surname}
+          ${m.isSup ? '<span class="sup-badge">Supervisor</span>' : ''}
+        </div>
+        <div class="member-detail">Omang: ${formatOmang(m.omang)} &nbsp;|&nbsp; ${m.sex==='M'?'Male':'Female'} &nbsp;|&nbsp; DOB: ${m.dob}</div>
+        <div class="member-detail">Phone: ${m.phone||'—'} &nbsp;|&nbsp; ${m.qual} &nbsp;|&nbsp; ${m.mm==='smega'?'Smega':'Orange Money'}</div>
+      </div>
+      <div class="card-actions">
+        <button class="action-btn${m.isSup?' sup-active':''}" onclick="toggleSupStatus('${m.id}')">
+          ${m.isSup ? 'Remove Sup' : 'Make Sup'}
+        </button>
+        <button class="action-btn edit"   onclick="openEdit('${m.id}')">Edit</button>
+        <button class="action-btn remove" onclick="removeMember('${m.id}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleSupStatus(id) {
+  const m=members.find(x=>x.id===id), sup=members.find(x=>x.isSup&&x.id!==id);
+  if (!m.isSup && sup) { showToast('Supervisor already assigned: '+sup.firstName+' '+sup.surname,'error'); return; }
+  m.isSup=!m.isSup; renderMembers();
+  showToast(m.isSup?'Supervisor assigned':'Supervisor removed');
+}
+
+function removeMember(id) {
+  if (!confirm('Remove this member from the group?')) return;
+  const m=members.find(x=>x.id===id);
+  if (m) {
+    projectOmangs.delete(m.omang); delete omangInfoMap[m.omang];
+    if (m.phone) { projectPhones.delete(m.phone); delete phoneInfoMap[m.phone]; }
+  }
+  members=members.filter(x=>x.id!==id);
+  renderMembers(); updateSaveBtn();
+  showToast('Member removed');
+}
+
+// ── Edit modal ─────────────────────────────────────────────────────────────
+function openEdit(id) {
+  editingId=id;
+  const m=members.find(x=>x.id===id);
+  document.getElementById('e-omang').value     = formatOmang(m.omang);
+  document.getElementById('e-surname').value   = m.surname;
+  document.getElementById('e-firstName').value = m.firstName;
+  document.getElementById('e-dob').value       = m.dob;
+  document.getElementById('e-phone').value     = m.phone||'';
+  editForm={sex:m.sex,mm:m.mm,qual:m.qual,isSup:m.isSup};
+  editPhoneOk=true;
+  applyEditSexDetection(m.omang);
+  setEditMM(m.mm);
+  renderQuals('e-qualPills',m.qual,setEditQual);
+  document.getElementById('e-supToggle').classList.toggle('active',m.isSup);
+  ['e-omangErr','e-phoneErr','e-phoneChecking','e-phoneOkText'].forEach(hide);
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); editingId=null; }
+
+function updateMember() {
+  const m=members.find(x=>x.id===editingId);
+  const sup=members.find(x=>x.isSup&&x.id!==editingId);
+  if (editForm.isSup&&sup) { showToast('Supervisor already assigned','error'); return; }
+  const omangVal=document.getElementById('e-omang').value;
+  if (!validOmang(omangVal)) { showFieldErr('e-omangErr','Omang must be exactly 9 digits.'); return; }
+  if (!editPhoneOk) { showToast('Fix the phone number error first','error'); return; }
+  const raw=rawOmang(omangVal), newPhone=document.getElementById('e-phone').value.trim();
+  const newFirst=document.getElementById('e-firstName').value.trim();
+  const newSur  =document.getElementById('e-surname').value.trim();
+
+  projectOmangs.delete(m.omang); delete omangInfoMap[m.omang];
+  if (m.phone) { projectPhones.delete(m.phone); delete phoneInfoMap[m.phone]; }
+  projectOmangs.add(raw);
+  omangInfoMap[raw]={name:`${newFirst} ${newSur}`,groupName:'this form'};
+  if (newPhone) { projectPhones.add(newPhone); phoneInfoMap[newPhone]={name:`${newFirst} ${newSur}`,groupName:'this form'}; }
+
+  m.omang=raw; m.surname=newSur; m.firstName=newFirst;
+  m.dob=document.getElementById('e-dob').value.trim();
+  m.phone=newPhone; m.sex=detectSexFromOmang(raw)||editForm.sex;
+  m.mm=editForm.mm; m.qual=editForm.qual; m.isSup=editForm.isSup;
+  closeEdit(); renderMembers(); showToast('Member updated');
+}
+
+// ── Save group ─────────────────────────────────────────────────────────────
+async function saveGroup() {
+  if (!PROJECT_ID) { showToast('No project linked. Cannot save.','error'); return; }
+  const groupName=document.getElementById('groupName').value.trim();
+  const location =document.getElementById('location').value.trim();
+  setSaving(true,'Creating group…');
+  try {
+    const { data:groupData, error:groupErr } = await sb
+      .from('groups')
+      .insert({ group_name:groupName, location, project:projectInfo?.project_name||'', project_id:PROJECT_ID })
+      .select().single();
+    if (groupErr) throw new Error('Group save failed: '+groupErr.message);
+    const groupId=groupData.id;
+    setSaving(true,`Adding ${members.length} member(s)…`);
+    const memberRows=members.map(m=>({
+      group_id:groupId,
+      omang_number:m.omang,
+      surname:m.surname,
+      first_name:m.firstName,
+      date_of_birth:m.dob,
+      cellphone_number:m.phone||null,
+      sex:detectSexFromOmang(m.omang)||m.sex,
+      mobile_money_provider:m.mm,
+      qualification:m.qual,
+      is_supervisor:m.isSup,
+      position:m.isSup?'Supervisor':'Worker',
+    }));
+    const { error:membersErr } = await sb.from('members').insert(memberRows);
+    if (membersErr) {
+      await sb.from('groups').delete().eq('id',groupId);
+      throw new Error('Members save failed: '+membersErr.message);
+    }
+    setSaving(false);
+    showToast(`Group "${groupName}" saved with ${members.length} member(s)!`);
+    setTimeout(()=>goBack(),1800);
+  } catch(e) {
+    setSaving(false);
+    showToast(e.message,'error');
+  }
+}
+
+function setSaving(on,msg='') {
+  document.getElementById('savingOverlay').classList.toggle('open',on);
+  if (msg) document.getElementById('savingText').textContent=msg;
+  document.getElementById('saveBtn').disabled=on;
+}
+
+function goBack() {
+  window.location.href = PROJECT_ID ? `vdc-dashboard.html?project=${PROJECT_ID}` : 'index.html';
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function show(id,condition=true){ const e=document.getElementById(id); if(e) e.style.display=condition?'block':'none'; }
+function hide(id){ const e=document.getElementById(id); if(e) e.style.display='none'; }
+function showElem(id){ const e=document.getElementById(id); if(e) e.style.display='block'; }
+function hideElem(id){ const e=document.getElementById(id); if(e) e.style.display='none'; }
+function showFieldErr(id,msg){ const e=document.getElementById(id); if(e){e.textContent=msg;e.style.display='block';} }
+function showElemErr(id,msg){ showFieldErr(id,msg); }
+function showToast(msg,type='success'){
+  const t=document.createElement('div');
+  t.className='toast '+type; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3200);
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+renderQuals('qualPills','PSLE',setQual);
+renderQuals('e-qualPills','PSLE',setEditQual);
+renderMembers();
+phoneOk=true;
+init();
+
+['groupName','location'].forEach(id =>
+  document.getElementById(id).addEventListener('input',updateSaveBtn));
+['omang','surname','firstName','dob'].forEach(id => {
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',updateAddBtn);
+});
+</script>
+</body>
+</html>

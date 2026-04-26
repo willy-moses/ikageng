@@ -1,0 +1,14 @@
+{
+  "name": "ikageng-waiting-list",
+  "version": "1.0.0",
+  "description": "Ikageng Worker Waiting List — Excel on server, Node.js API, Vercel",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

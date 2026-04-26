@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — VDC Projects</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #09100f;
+    --surface: #111a18;
+    --s2:      #18241f;
+    --border:  #1e2d28;
+    --accent:  #00c98a;
+    --gold:    #e8b84b;
+    --blue:    #4fc0d4;
+    --red:     #f06060;
+    --text:    #dff0eb;
+    --muted:   #6b8c84;
+    --green:   #2c5530;
+    --green2:  #34623a;
+    --green3:  #3d6f44;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 60%, var(--green3) 100%);
+    padding: 2rem 1.5rem 1.8rem;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .logo-circle {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 700;
+    color: #fff; flex-shrink: 0; border: 2px solid rgba(255,255,255,.25);
+  }
+  .header-text h1 { font-family: 'Fraunces', serif; font-size: clamp(1.1rem,4vw,1.45rem); font-weight: 700; color: #fff; line-height: 1.2; }
+  .header-text p  { font-size: .7rem; color: rgba(255,255,255,.85); margin-top: .25rem; letter-spacing: .04em; }
+
+  .scroll-body { padding: 1.5rem; max-width: 720px; margin: 0 auto; width: 100%; }
+
+  .info-banner {
+    background: rgba(232,184,75,.06); border: 1px solid rgba(232,184,75,.22);
+    border-radius: 8px; padding: .85rem 1rem; margin-bottom: 1.4rem;
+    font-size: .72rem; color: var(--gold); line-height: 1.7;
+    display: flex; align-items: flex-start; gap: .6rem;
+  }
+  .info-banner.empty { background: rgba(79,192,212,.06); border-color: rgba(79,192,212,.22); color: var(--blue); }
+  .info-banner.ok    { background: rgba(0,201,138,.06);  border-color: rgba(0,201,138,.22);  color: var(--accent); }
+
+  .create-btn {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 100%);
+    border: 1px solid rgba(0,201,138,.3); border-radius: 12px;
+    padding: 1.1rem 1.5rem; display: flex; align-items: center;
+    justify-content: center; gap: .8rem; cursor: pointer; width: 100%;
+    margin-bottom: 1.5rem; font-family: 'DM Mono', monospace; color: #fff;
+    font-size: .88rem; font-weight: 500; letter-spacing: .05em;
+    transition: opacity .2s, transform .1s; text-transform: uppercase;
+    box-shadow: 0 4px 20px rgba(0,201,138,.12);
+  }
+  .create-btn:hover  { opacity: .88; transform: translateY(-1px); }
+  .create-btn:active { transform: scale(.98); }
+
+  .stats-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.1rem 1.5rem; margin-bottom: 1.4rem;
+  }
+  .stats-card h2 { font-family: 'Fraunces', serif; font-size: .9rem; color: var(--accent); text-align: center; margin-bottom: .9rem; }
+  .stats-row { display: grid; grid-template-columns: repeat(2,1fr); gap: .75rem; }
+  .stat-item { text-align: center; }
+  .stat-num  { font-family: 'Fraunces', serif; font-size: 1.9rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat-lbl  { font-size: .58rem; color: var(--muted); margin-top: .25rem; letter-spacing: .12em; text-transform: uppercase; }
+
+  .section-label { font-size: .58rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: .7rem; margin-top: 1.2rem; }
+
+  .project-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: .85rem;
+    overflow: hidden; transition: border-color .2s;
+    animation: fadeIn .25s ease;
+  }
+  .project-card:hover { border-color: rgba(0,201,138,.35); }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+
+  .project-main {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1.1rem 1.2rem; cursor: pointer; transition: background .15s;
+  }
+  .project-main:hover { background: var(--s2); }
+
+  .project-icon {
+    width: 54px; height: 54px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex-shrink: 0; border: 1px solid rgba(0,201,138,.2);
+  }
+  .project-icon .mon { font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.95); letter-spacing: .06em; text-transform: uppercase; }
+  .project-icon .yr  { font-size: .62rem; color: rgba(255,255,255,.7); margin-top: .1rem; }
+
+  .project-info { flex: 1; min-width: 0; }
+  .project-name { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .project-desc { font-size: .63rem; color: var(--muted); margin-bottom: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .project-meta { font-size: .63rem; color: var(--accent); display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+  .project-meta span { color: var(--muted); }
+
+  .supa-badge {
+    font-size: .55rem; background: rgba(0,201,138,.12); border: 1px solid rgba(0,201,138,.25);
+    color: var(--accent); border-radius: 4px; padding: .15rem .4rem; letter-spacing: .06em;
+  }
+
+  .select-arrow { color: var(--accent); font-size: 1rem; flex-shrink: 0; transition: transform .2s; }
+  .project-main:hover .select-arrow { transform: translateX(3px); }
+
+  .project-actions { display: flex; border-top: 1px solid var(--border); }
+  .proj-action-btn {
+    flex: 1; padding: .6rem; background: transparent; border: none;
+    font-family: 'DM Mono', monospace; font-size: .63rem; color: var(--muted);
+    cursor: pointer; transition: background .15s, color .15s;
+    display: flex; align-items: center; justify-content: center; gap: .4rem;
+    border-right: 1px solid var(--border); letter-spacing: .04em;
+  }
+  .proj-action-btn:last-child { border-right: none; }
+  .proj-action-btn:hover        { background: var(--s2); color: var(--text); }
+  .proj-action-btn.danger:hover { background: rgba(240,96,96,.08); color: var(--red); }
+
+  .empty-state { text-align: center; padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; gap: .8rem; }
+  .empty-icon  { font-size: 3rem; margin-bottom: .4rem; }
+  .empty-state h2 { font-family: 'Fraunces', serif; font-size: 1.2rem; color: var(--accent); }
+  .empty-state p  { font-size: .75rem; color: var(--muted); line-height: 1.7; max-width: 280px; }
+
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--s2); border: 1px solid var(--border);
+    border-radius: 8px; padding: .75rem 1.1rem;
+    font-size: .72rem; color: var(--text); z-index: 999;
+    animation: toastIn .2s ease; max-width: 300px; line-height: 1.5;
+  }
+  .toast.success { border-color: rgba(0,201,138,.4); color: var(--accent); }
+  .toast.error   { border-color: rgba(240,96,96,.4);  color: var(--red); }
+  .toast.info    { border-color: rgba(79,192,212,.4);  color: var(--blue); }
+  @keyframes toastIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.78); z-index: 50;
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.8rem;
+    width: min(480px, 95vw); max-height: 88vh; overflow-y: auto;
+    animation: slideUp .22s ease;
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 700; color: var(--accent); text-align: center; margin-bottom: 1.4rem; }
+  .modal-title.danger { color: var(--red); }
+
+  .form-group { display: flex; flex-direction: column; gap: .32rem; margin-bottom: .95rem; }
+  .form-group label { font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  input[type="text"], textarea {
+    background: var(--s2); border: 1px solid var(--border); color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: .8rem; padding: .6rem .9rem;
+    border-radius: 7px; outline: none; width: 100%; transition: border-color .2s;
+  }
+  input[type="text"]:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .month-grid { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .2rem; }
+  .month-pill {
+    padding: .38rem .75rem; border: 1px solid var(--border); border-radius: 20px;
+    background: var(--s2); font-size: .68rem; cursor: pointer; color: var(--muted);
+    transition: all .15s; user-select: none;
+  }
+  .month-pill:hover  { border-color: var(--accent); color: var(--accent); }
+  .month-pill.active { background: var(--accent); border-color: var(--accent); color: #001a10; font-weight: 500; }
+
+  .year-row { display: flex; gap: .5rem; margin-top: .2rem; }
+  .year-pill {
+    padding: .38rem .9rem; border: 1px solid var(--border); border-radius: 20px;
+    background: var(--s2); font-size: .68rem; cursor: pointer; color: var(--muted);
+    transition: all .15s; user-select: none;
+  }
+  .year-pill:hover  { border-color: var(--accent); color: var(--accent); }
+  .year-pill.active { background: var(--accent); border-color: var(--accent); color: #001a10; font-weight: 500; }
+
+  .modal-btns { display: flex; gap: .75rem; margin-top: 1.4rem; }
+  .modal-cancel {
+    flex: 1; padding: .7rem; background: transparent;
+    border: 1px solid var(--border); border-radius: 7px;
+    cursor: pointer; color: var(--muted); font-family: 'DM Mono', monospace;
+    font-size: .75rem; transition: all .15s;
+  }
+  .modal-cancel:hover { border-color: var(--accent); color: var(--accent); }
+  .modal-confirm {
+    flex: 1; padding: .7rem; background: var(--accent); border: none;
+    border-radius: 7px; cursor: pointer; color: #001a10;
+    font-family: 'DM Mono', monospace; font-size: .75rem; font-weight: 500;
+    transition: opacity .15s;
+  }
+  .modal-confirm:hover    { opacity: .85; }
+  .modal-confirm:disabled { opacity: .4; cursor: not-allowed; }
+  .modal-confirm.danger   { background: var(--red); color: #fff; }
+
+  .loading-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); z-index: 200;
+    flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  }
+  .loading-overlay.open { display: flex; }
+  .spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text-el { font-size: .8rem; color: var(--text); letter-spacing: .1em; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text-el" id="loadingText">Loading…</div>
+</div>
+
+<div class="header">
+  <div class="logo-circle">IK</div>
+  <div class="header-text">
+    <h1>VDC Projects</h1>
+    <p>Ipelegeng Programme — Project Management</p>
+  </div>
+</div>
+
+<div class="scroll-body">
+
+  <div class="stats-card" style="margin-top:.5rem">
+    <h2>Overview</h2>
+    <div class="stats-row">
+      <div class="stat-item"><div class="stat-num" id="statProjects">—</div><div class="stat-lbl">Projects</div></div>
+      <div class="stat-item"><div class="stat-num" id="statGroups">—</div><div class="stat-lbl">Total Groups</div></div>
+    </div>
+  </div>
+
+  <div class="info-banner" id="infoBanner">
+    <span id="bannerIcon">ℹ️</span>
+    <span id="infoBannerText">Loading projects from Supabase…</span>
+  </div>
+
+  <button class="create-btn" onclick="openCreateModal()">
+    <span style="font-size:1.2rem">➕</span> Create New Project
+  </button>
+
+  <div class="section-label" id="projectsLabel" style="display:none">Available Projects</div>
+  <div id="projectsList"></div>
+
+</div>
+
+<!-- CREATE MODAL -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-title">Create New Project</div>
+
+    <div class="form-group">
+      <label>Project Name *</label>
+      <input type="text" id="c-name" placeholder="e.g., Ikageng Road Maintenance 2025">
+    </div>
+    <div class="form-group">
+      <label>Description (optional)</label>
+      <textarea id="c-desc" placeholder="Brief description of this project…"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Month *</label>
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
+    <div class="form-group">
+      <label>Year *</label>
+      <div class="year-row" id="yearRow"></div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('createModal')">Cancel</button>
+      <button class="modal-confirm" onclick="createProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title danger">⚠️ Delete Project?</div>
+    <p style="font-size:.78rem;color:var(--muted);line-height:1.7;margin-bottom:1rem">
+      This will permanently delete the project from Supabase.
+      Groups linked to this project will <strong style="color:var(--red)">lose their project reference</strong>.
+      This cannot be undone.
+    </p>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="modal-confirm danger" onclick="confirmDelete()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Supabase ──────────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+
+const hdrs = {
+  'Content-Type':  'application/json',
+  'apikey':        SUPA_KEY,
+  'Authorization': `Bearer ${SUPA_KEY}`,
+  'Prefer':        'return=representation'
+};
+
+async function sbFetch(path, options = {}) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    headers: { ...hdrs, ...(options.headers || {}) },
+    ...options
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let projects         = [];
+let groupCounts      = {};
+let deleteTargetId   = null;
+let deleteTargetName = '';
+let selectedMonth    = '';
+let selectedYear     = new Date().getFullYear().toString();
+
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+const YEARS  = [
+  (new Date().getFullYear() - 1).toString(),
+   new Date().getFullYear().toString(),
+  (new Date().getFullYear() + 1).toString()
+];
+
+// ── Month / Year pickers ──────────────────────────────────────────────────────
+function renderMonthGrid() {
+  document.getElementById('monthGrid').innerHTML = MONTHS.map(m =>
+    `<div class="month-pill${selectedMonth===m?' active':''}" onclick="setMonth('${m}')">${m.substring(0,3)}</div>`
+  ).join('');
+}
+function renderYearRow() {
+  document.getElementById('yearRow').innerHTML = YEARS.map(y =>
+    `<div class="year-pill${selectedYear===y?' active':''}" onclick="setYear('${y}')">${y}</div>`
+  ).join('');
+}
+function setMonth(m) { selectedMonth = m; renderMonthGrid(); }
+function setYear(y)  { selectedYear  = y; renderYearRow(); }
+
+// ── Load data ─────────────────────────────────────────────────────────────────
+async function loadProjects() {
+  try {
+    // Load projects from new table
+    const data = await sbFetch('projects?order=created_at.desc&select=*');
+    projects = data || [];
+
+    // Load group counts grouped by project_id
+    const groups = await sbFetch('groups?select=project_id').catch(() => []);
+    groupCounts = {};
+    (groups || []).forEach(g => {
+      if (g.project_id) groupCounts[g.project_id] = (groupCounts[g.project_id] || 0) + 1;
+    });
+
+    updateStats();
+    renderProjects();
+  } catch (err) {
+    showToast('Failed to load projects: ' + err.message, 'error');
+    setBanner('Could not connect to Supabase. Check your connection.', 'warn');
+    projects = [];
+    updateStats();
+    renderProjects();
+  }
+}
+
+// ── Stats & banner ────────────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('statProjects').textContent = projects.length;
+  const total = Object.values(groupCounts).reduce((a, b) => a + b, 0);
+  document.getElementById('statGroups').textContent = total;
+
+  if (projects.length === 0) {
+    setBanner('No projects yet. Create your first project — groups will live inside it.', 'empty');
+  } else {
+    setBanner(
+      `${projects.length} project${projects.length > 1 ? 's' : ''} loaded. Select one to manage its groups.`,
+      'ok'
+    );
+  }
+}
+
+function setBanner(text, type) {
+  const el   = document.getElementById('infoBanner');
+  const icon = document.getElementById('bannerIcon');
+  const tx   = document.getElementById('infoBannerText');
+  el.className = 'info-banner' + (type === 'empty' ? ' empty' : type === 'ok' ? ' ok' : '');
+  icon.textContent = type === 'ok' ? '✅' : type === 'empty' ? 'ℹ️' : '⚠️';
+  tx.textContent   = text;
+}
+
+// ── Render cards ──────────────────────────────────────────────────────────────
+function renderProjects() {
+  const container = document.getElementById('projectsList');
+  const label     = document.getElementById('projectsLabel');
+
+  if (!projects.length) {
+    label.style.display = 'none';
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📁</div>
+        <h2>No Projects Yet</h2>
+        <p>Create your first project to start managing worker groups and attendance records.</p>
+      </div>`;
+    return;
+  }
+
+  label.style.display = 'block';
+  container.innerHTML = projects.map(p => {
+    const created    = new Date(p.created_at).toLocaleDateString('en-ZA');
+    const grpCount   = groupCounts[p.id] || 0;
+    const monthShort = (p.month || '—').substring(0, 3).toUpperCase();
+
+    return `
+    <div class="project-card" id="card-${p.id}">
+      <div class="project-main" onclick="selectProject('${p.id}')">
+        <div class="project-icon">
+          <div class="mon">${esc(monthShort)}</div>
+          <div class="yr">${esc(p.year || '')}</div>
+        </div>
+        <div class="project-info">
+          <div class="project-name">${esc(p.project_name)}</div>
+          ${p.description ? `<div class="project-desc">${esc(p.description)}</div>` : ''}
+          <div class="project-meta">
+            📅 ${esc(p.month || '')} ${esc(p.year || '')}
+            <span>·</span>
+            👥 ${grpCount} group${grpCount !== 1 ? 's' : ''}
+            <span>·</span>
+            <span class="supa-badge">Supabase ✓</span>
+            <span>·</span>
+            <span>Created ${created}</span>
+          </div>
+        </div>
+        <div class="select-arrow">›</div>
+      </div>
+      <div class="project-actions">
+        <button class="proj-action-btn" onclick="selectProject('${p.id}')">✅ Open Project</button>
+        <button class="proj-action-btn danger" onclick="openDeleteModal('${p.id}', '${esc(p.project_name)}')">🗑️ Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function openCreateModal() {
+  selectedMonth = MONTHS[new Date().getMonth()];
+  selectedYear  = new Date().getFullYear().toString();
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-desc').value = '';
+  renderMonthGrid();
+  renderYearRow();
+  document.getElementById('createModal').classList.add('open');
+}
+
+function openDeleteModal(id, name) {
+  deleteTargetId   = id;
+  deleteTargetName = name;
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Create ────────────────────────────────────────────────────────────────────
+async function createProject() {
+  const name = document.getElementById('c-name').value.trim();
+  const desc = document.getElementById('c-desc').value.trim();
+
+  if (!name)          { showToast('Please enter a project name', 'error'); return; }
+  if (!selectedMonth) { showToast('Please select a month', 'error'); return; }
+
+  const dup = projects.find(p => p.project_name.toLowerCase() === name.toLowerCase());
+  if (dup) { showToast('A project with this name already exists', 'error'); return; }
+
+  setLoading(true, 'Saving project to Supabase…');
+  closeModal('createModal');
+
+  try {
+    const result = await sbFetch('projects', {
+      method: 'POST',
+      body: JSON.stringify({
+        project_name: name,
+        month:        selectedMonth,
+        year:         selectedYear,
+        description:  desc || null
+      })
+    });
+
+    if (result && result.length) projects.unshift(result[0]);
+    updateStats();
+    renderProjects();
+    setLoading(false);
+    showToast(`"${name}" created ✓`, 'success');
+  } catch (err) {
+    setLoading(false);
+    showToast('Error creating project: ' + err.message, 'error');
+  }
+}
+
+// ── Select ────────────────────────────────────────────────────────────────────
+function selectProject(id) {
+  window.location.href = `vdc-dashboard.html?project=${id}`;
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+async function confirmDelete() {
+  if (!deleteTargetId) return;
+  setLoading(true, 'Deleting project…');
+  closeModal('deleteModal');
+
+  try {
+    await sbFetch(`projects?id=eq.${deleteTargetId}`, {
+      method:  'DELETE',
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    projects = projects.filter(p => p.id !== deleteTargetId);
+    delete groupCounts[deleteTargetId];
+    deleteTargetId = null;
+    updateStats();
+    renderProjects();
+    setLoading(false);
+    showToast(`"${deleteTargetName}" deleted`, 'error');
+  } catch (err) {
+    setLoading(false);
+    showToast('Error deleting: ' + err.message, 'error');
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setLoading(on, text = 'Processing…') {
+  document.getElementById('loadingOverlay').classList.toggle('open', on);
+  document.getElementById('loadingText').textContent = text;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadProjects();
+</script>
+</body>
+</html>

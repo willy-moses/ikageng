@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Special Workers</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;
+    --orange:#fd7e14;--text:#dff0eb;--muted:#6b8c84;
+    --green:#2c5530;--green2:#34623a;--green3:#3d6f44;--sup:#d4a574;
+    --purple:#a78bfa;--pink:#f472b6;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
+
+  /* ── Header ── */
+  .header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 60%,var(--green3) 100%);padding:1.6rem 1.5rem 1.4rem;display:flex;align-items:center;gap:1rem;}
+  .logo-circle{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--green);flex-shrink:0;}
+  .header-text{flex:1;min-width:0;}
+  .header-text h1{font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.35rem);font-weight:700;color:#fff;line-height:1.2;}
+  .header-text p{font-size:.67rem;color:rgba(255,255,255,.8);margin-top:.2rem;letter-spacing:.04em;}
+  .back-pill{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.42rem 1rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;flex-shrink:0;}
+  .back-pill:hover{background:rgba(255,255,255,.28);}
+
+  /* ── Notice ── */
+  .notice-strip{background:rgba(167,139,250,.06);border-bottom:1px solid rgba(167,139,250,.18);padding:.5rem 1.5rem;font-size:.63rem;color:var(--purple);display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+  .notice-strip strong{color:rgba(167,139,250,.9);}
+
+  /* ── Body ── */
+  .scroll-body{padding:1.5rem;}
+
+  /* ── Stats ── */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;margin-bottom:1.4rem;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem .8rem;text-align:center;}
+  .stat-num{font-family:'Fraunces',serif;font-size:1.7rem;font-weight:700;line-height:1;}
+  .stat-lbl{font-size:.48rem;color:var(--muted);margin-top:.3rem;letter-spacing:.08em;text-transform:uppercase;line-height:1.4;}
+  .stat-card.c-all .stat-num{color:var(--accent);}
+  .stat-card.c-vdc .stat-num{color:var(--blue);}
+  .stat-card.c-dest .stat-num{color:var(--gold);}
+  .stat-card.c-vol .stat-num{color:var(--purple);}
+
+  /* ── Search + Filter ── */
+  .search-wrap{position:relative;margin-bottom:.9rem;}
+  .search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.65rem 1rem .65rem 2.4rem;border-radius:8px;outline:none;transition:border-color .15s;}
+  .search-wrap input:focus{border-color:var(--accent);}
+  .search-wrap input::placeholder{color:var(--muted);}
+  .search-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem;pointer-events:none;}
+  .filter-chips{display:flex;gap:.5rem;margin-bottom:1.2rem;overflow-x:auto;padding-bottom:.2rem;}
+  .chip{padding:.32rem .9rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.65rem;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;white-space:nowrap;}
+  .chip:hover{border-color:var(--accent);color:var(--text);}
+  .chip.active{background:var(--green);border-color:var(--accent);color:var(--accent);font-weight:500;}
+
+  /* ── Add btn ── */
+  .add-btn{width:100%;padding:.9rem;background:rgba(167,139,250,.07);border:1px dashed rgba(167,139,250,.4);border-radius:10px;color:var(--purple);font-family:'DM Mono',monospace;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .2s;letter-spacing:.04em;margin-bottom:1.4rem;}
+  .add-btn:hover{background:rgba(167,139,250,.14);border-color:var(--purple);}
+
+  /* ── Section label ── */
+  .section-label{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem;}
+
+  /* ── Category colors ── */
+  .cat-vdc       {border-left-color:var(--blue)!important;   background:rgba(79,192,212,.04)!important;}
+  .cat-destitute {border-left-color:var(--gold)!important;   background:rgba(232,184,75,.04)!important;}
+  .cat-vulnerable{border-left-color:var(--orange)!important; background:rgba(253,126,20,.04)!important;}
+  .cat-volunteer {border-left-color:var(--purple)!important; background:rgba(167,139,250,.04)!important;}
+  .cat-other     {border-left-color:var(--muted)!important;  background:var(--surface)!important;}
+
+  .cat-badge-vdc       {background:rgba(79,192,212,.15);color:var(--blue);border:1px solid rgba(79,192,212,.3);}
+  .cat-badge-destitute {background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);}
+  .cat-badge-vulnerable{background:rgba(253,126,20,.15);color:var(--orange);border:1px solid rgba(253,126,20,.3);}
+  .cat-badge-volunteer {background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3);}
+  .cat-badge-other     {background:rgba(107,140,132,.1);color:var(--muted);border:1px solid var(--border);}
+
+  /* ── Worker cards ── */
+  .worker-card{border-radius:10px;padding:1rem 1.1rem;margin-bottom:.7rem;border:1px solid var(--border);border-left:4px solid var(--muted);}
+  .card-top{display:flex;align-items:center;gap:.45rem;margin-bottom:.55rem;flex-wrap:wrap;}
+  .cat-badge{font-size:.52rem;padding:.14rem .55rem;border-radius:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:500;}
+  .fixed-badge{font-size:.5rem;padding:.13rem .5rem;border-radius:10px;background:rgba(0,201,138,.1);color:var(--accent);border:1px solid rgba(0,201,138,.25);text-transform:uppercase;letter-spacing:.06em;}
+  .worker-name{font-size:.9rem;font-weight:500;color:var(--text);margin-bottom:.45rem;}
+  .worker-detail{font-size:.65rem;color:var(--muted);line-height:1.95;}
+  .worker-detail b{color:var(--text);font-weight:400;}
+  .worker-notes{font-size:.63rem;color:var(--gold);margin-top:.4rem;font-style:italic;line-height:1.7;}
+  .card-footer{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.8rem;}
+  .edit-pill{background:rgba(79,192,212,.08);border:1px solid rgba(79,192,212,.25);color:var(--blue);font-family:'DM Mono',monospace;font-size:.6rem;padding:.28rem .85rem;border-radius:5px;cursor:pointer;transition:all .15s;}
+  .edit-pill:hover{background:rgba(79,192,212,.18);}
+  .remove-pill{background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.25);color:var(--red);font-family:'DM Mono',monospace;font-size:.6rem;padding:.28rem .85rem;border-radius:5px;cursor:pointer;transition:all .15s;}
+  .remove-pill:hover{background:rgba(240,96,96,.18);}
+
+  /* ── Empty / Loading ── */
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:.78rem;color:var(--muted);letter-spacing:.1em;}
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.78rem;font-style:italic;}
+
+  /* ── Toast ── */
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1.1rem;font-size:.72rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:300px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error  {border-color:rgba(240,96,96,.4);color:var(--red);}
+  .toast.info   {border-color:rgba(79,192,212,.4);color:var(--blue);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ── Modal ── */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;align-items:flex-end;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal-sheet{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:92vh;display:flex;flex-direction:column;animation:sheetUp .25s ease;}
+  @keyframes sheetUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+  .modal-header{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .modal-header h2{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:.2rem .5rem;border-radius:4px;}
+  .modal-close:hover{color:var(--red);}
+  .modal-body{flex:1;overflow-y:auto;padding:1.3rem 1.5rem;}
+  .modal-footer-btns{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.75rem;flex-shrink:0;}
+  .modal-footer-btns button{flex:1;padding:.65rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.75rem;cursor:pointer;font-weight:500;}
+  .btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);}
+  .btn-cancel:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-save{background:var(--accent);border:none;color:#001a10;}
+  .btn-save:hover{opacity:.88;}
+  .btn-save:disabled{opacity:.45;cursor:not-allowed;}
+
+  /* ── Form ── */
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;}
+  .form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem;}
+  .form-group label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .form-group input,.form-group select,.form-group textarea{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.6rem .85rem;border-radius:7px;outline:none;transition:border-color .15s;width:100%;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
+  .form-group input::placeholder,.form-group textarea::placeholder{color:var(--muted);}
+  .form-group select option{background:var(--s2);color:var(--text);}
+  .form-group textarea{resize:vertical;min-height:68px;}
+  .chips-row{display:flex;gap:.45rem;flex-wrap:wrap;}
+  .fchip{padding:.3rem .8rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.65rem;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;}
+  .fchip:hover{border-color:var(--accent);color:var(--text);}
+  .fchip.active{background:var(--green);border-color:var(--accent);color:var(--accent);font-weight:500;}
+  .omang-hint{font-size:.62rem;margin-top:.2rem;color:var(--muted);}
+  .omang-hint.valid{color:var(--accent);}
+  .omang-hint.invalid{color:var(--red);}
+  .omang-hint.checking{color:var(--blue);}
+  .autofill-box{background:rgba(212,165,116,.07);border:1px solid rgba(212,165,116,.3);border-radius:9px;padding:1rem 1.1rem;margin-bottom:1rem;}
+  .autofill-box h4{font-family:'Fraunces',serif;font-size:.9rem;color:var(--sup);margin-bottom:.5rem;}
+  .autofill-box p{font-size:.67rem;color:var(--muted);line-height:1.9;}
+  .autofill-box p b{color:var(--text);font-weight:400;}
+  .form-err{font-size:.68rem;color:var(--red);margin-bottom:.6rem;min-height:1rem;}
+  .form-section-title{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+
+  /* ── Already-in-special badge ── */
+  .already-badge{font-size:.52rem;padding:.14rem .6rem;border-radius:10px;background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.3);letter-spacing:.06em;}
+
+  @media(max-width:420px){.form-row{grid-template-columns:1fr;}.stats{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading special workers…</div>
+</div>
+
+<div class="header">
+  <div class="logo-circle">IK</div>
+  <div class="header-text">
+    <h1>Special Workers</h1>
+    <p>Fixed monthly workers — VDC, Destitutes, Vulnerable, Volunteers &amp; others</p>
+  </div>
+  <a class="back-pill" href="vdc-dashboard.html">← Dashboard</a>
+</div>
+
+<div class="notice-strip">
+  ⭐ <strong>Global list —</strong> Special workers are fixed monthly employees. They do <strong>not rotate</strong> through the waiting list and are accessible across all projects.
+</div>
+
+<div class="scroll-body">
+
+  <div class="stats">
+    <div class="stat-card c-all"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total Special</div></div>
+    <div class="stat-card c-vdc"><div class="stat-num" id="stat-vdc">—</div><div class="stat-lbl">VDC</div></div>
+    <div class="stat-card c-dest"><div class="stat-num" id="stat-dest">—</div><div class="stat-lbl">Destitutes</div></div>
+    <div class="stat-card c-vol"><div class="stat-num" id="stat-vol">—</div><div class="stat-lbl">Volunteers</div></div>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search by name, Omang, village, or category…" oninput="renderList()">
+  </div>
+
+  <div class="filter-chips">
+    <div class="chip active" data-f="all"        onclick="setFilter(this)">All</div>
+    <div class="chip"        data-f="VDC"         onclick="setFilter(this)">🔵 VDC</div>
+    <div class="chip"        data-f="Destitute"   onclick="setFilter(this)">🟡 Destitute</div>
+    <div class="chip"        data-f="Vulnerable"  onclick="setFilter(this)">🟠 Vulnerable</div>
+    <div class="chip"        data-f="Volunteer"   onclick="setFilter(this)">🟣 Volunteer</div>
+    <div class="chip"        data-f="Other"       onclick="setFilter(this)">⚪ Other</div>
+  </div>
+
+  <button class="add-btn" onclick="openModal()">+ Add Special Worker</button>
+
+  <div class="section-label" id="listLabel">Workers</div>
+  <div id="workerList"></div>
+</div>
+
+<!-- ── Add / Edit Modal ── -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add Special Worker</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="autofill-box" id="autofillBox" style="display:none">
+        <h4>↩ Worker Found in Archive!</h4>
+        <p id="autofillText"></p>
+      </div>
+      <div class="form-err" id="formErr"></div>
+
+      <!-- Omang -->
+      <div class="form-group">
+        <label>Omang Number * (9 digits)</label>
+        <input type="text" id="f-omang" placeholder="123 456 789" maxlength="11" oninput="handleOmangInput(this)">
+        <div class="omang-hint" id="omangHint">Enter 9-digit Omang number</div>
+      </div>
+
+      <div class="form-section-title">Personal Information</div>
+      <div class="form-row">
+        <div class="form-group"><label>Surname *</label><input type="text" id="f-surname" placeholder="Mokoena"></div>
+        <div class="form-group"><label>First Name *</label><input type="text" id="f-first" placeholder="Tebogo"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date of Birth *</label><input type="text" id="f-dob" placeholder="YYYY-MM-DD"></div>
+        <div class="form-group"><label>Village *</label><input type="text" id="f-village" placeholder="Village name"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone (optional)</label><input type="tel" id="f-phone" placeholder="71234567" maxlength="8"></div>
+        <div class="form-group">
+          <label>Gender *</label>
+          <div class="chips-row" id="chips-sex">
+            <div class="fchip active" data-v="M" onclick="setChip('sex',this)">Male</div>
+            <div class="fchip"        data-v="F" onclick="setChip('sex',this)">Female</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mobile Money Provider *</label>
+        <div class="chips-row" id="chips-mmp">
+          <div class="fchip active" data-v="smega"  onclick="setChip('mmp',this)">Smega</div>
+          <div class="fchip"        data-v="orange" onclick="setChip('mmp',this)">Orange Money</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Qualification *</label>
+        <div class="chips-row" id="chips-qual">
+          <div class="fchip"        data-v="None"         onclick="setChip('qual',this)">None</div>
+          <div class="fchip"        data-v="Non-formal"   onclick="setChip('qual',this)">Non-formal</div>
+          <div class="fchip active" data-v="PSLE"         onclick="setChip('qual',this)">PSLE</div>
+          <div class="fchip"        data-v="JC"           onclick="setChip('qual',this)">JC</div>
+          <div class="fchip"        data-v="BGCSE"        onclick="setChip('qual',this)">BGCSE</div>
+          <div class="fchip"        data-v="Certificate"  onclick="setChip('qual',this)">Certificate</div>
+          <div class="fchip"        data-v="Diploma"      onclick="setChip('qual',this)">Diploma</div>
+          <div class="fchip"        data-v="Degree"       onclick="setChip('qual',this)">Degree</div>
+          <div class="fchip"        data-v="Master Degree" onclick="setChip('qual',this)">Master Degree</div>
+        </div>
+      </div>
+
+      <div class="form-section-title">Special Worker Details</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="f-category">
+            <option value="">— Select category —</option>
+            <option value="VDC">VDC</option>
+            <option value="Destitute">Destitute</option>
+            <option value="Vulnerable">Vulnerable</option>
+            <option value="Volunteer">Volunteer</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Start Date (optional)</label>
+          <input type="text" id="f-startdate" placeholder="YYYY-MM-DD">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Reason / Additional Notes *</label>
+        <textarea id="f-notes" placeholder="Explain why this worker is on the special/fixed list. E.g. VDC chairperson, certified destitute, community volunteer since 2020…" rows="4"></textarea>
+      </div>
+
+    </div>
+    <div class="modal-footer-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" id="saveBtn" onclick="saveWorker()">Add Special Worker</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let _list = [], _filter = 'all', _afCache = null, _omangTimer = null, _editId = null;
+
+// ── Category helpers ────────────────────────────────────────────────────────
+const CAT_META = {
+  VDC:        { cls: 'cat-vdc',        badge: 'cat-badge-vdc',        icon: '🔵', label: 'VDC' },
+  Destitute:  { cls: 'cat-destitute',  badge: 'cat-badge-destitute',  icon: '🟡', label: 'Destitute' },
+  Vulnerable: { cls: 'cat-vulnerable', badge: 'cat-badge-vulnerable',  icon: '🟠', label: 'Vulnerable' },
+  Volunteer:  { cls: 'cat-volunteer',  badge: 'cat-badge-volunteer',   icon: '🟣', label: 'Volunteer' },
+  Other:      { cls: 'cat-other',      badge: 'cat-badge-other',       icon: '⚪', label: 'Other' },
+};
+function catMeta(c){ return CAT_META[c] || CAT_META['Other']; }
+
+// ── Omang helpers ───────────────────────────────────────────────────────────
+function fmtOmang(v){ const d=v.replace(/\D/g,'').substring(0,9);let o='';for(let i=0;i<d.length;i++){if(i&&i%3===0)o+=' ';o+=d[i];}return o; }
+function rawOmang(v){ return (v||'').replace(/\s/g,''); }
+function validOmang(v){ const r=rawOmang(v);return r.length===9&&/^\d{9}$/.test(r); }
+function genderFromOmang(v){ const r=rawOmang(v);if(r.length===9){const d=parseInt(r[4]);if(d===1)return'M';if(d===2)return'F';}return null; }
+function calcAge(dob){ if(!dob)return'?';const b=new Date(dob),t=new Date();let a=t.getFullYear()-b.getFullYear();if(t.getMonth()<b.getMonth()||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate()))a--;return isNaN(a)?'?':a; }
+
+// ── Init ────────────────────────────────────────────────────────────────────
+async function init(){
+  await loadList();
+  document.getElementById('loadingScreen').style.display = 'none';
+}
+
+// ── Load ────────────────────────────────────────────────────────────────────
+async function loadList(){
+  const { data, error } = await sb
+    .from('special_workers')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error){ showToast('Failed to load: ' + error.message, 'error'); return; }
+  _list = data || [];
+  renderList();
+}
+
+// ── Filter + Render ─────────────────────────────────────────────────────────
+function setFilter(el){
+  document.querySelectorAll('.filter-chips .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active'); _filter = el.dataset.f; renderList();
+}
+
+function renderList(){
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+
+  // Stats
+  document.getElementById('stat-total').textContent = _list.length;
+  document.getElementById('stat-vdc').textContent   = _list.filter(w=>w.category==='VDC').length;
+  document.getElementById('stat-dest').textContent  = _list.filter(w=>w.category==='Destitute').length;
+  document.getElementById('stat-vol').textContent   = _list.filter(w=>w.category==='Volunteer').length;
+
+  let list = _list.filter(w => {
+    const txt = `${w.first_name} ${w.surname} ${w.omang_number} ${w.village||''} ${w.category||''}`.toLowerCase();
+    if (q && !txt.includes(q)) return false;
+    if (_filter === 'all') return true;
+    return w.category === _filter;
+  });
+
+  document.getElementById('listLabel').textContent = `${list.length} worker${list.length!==1?'s':''} shown`;
+
+  const el = document.getElementById('workerList');
+  if (!list.length){
+    el.innerHTML = `<div class="empty-state">${(q||_filter!=='all') ? 'No workers match your filter.' : 'No special workers added yet.'}</div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(w => {
+    const m     = catMeta(w.category);
+    const mmp   = w.mobile_money_provider === 'smega' ? 'Smega' : 'Orange Money';
+    const since = w.start_date ? new Date(w.start_date).toLocaleDateString('en-ZA') : '—';
+    const added = w.created_at ? new Date(w.created_at).toLocaleDateString('en-ZA') : '—';
+    return `<div class="worker-card ${m.cls}">
+      <div class="card-top">
+        <span class="cat-badge ${m.badge}">${m.icon} ${m.label}</span>
+        <span class="fixed-badge">⭐ Fixed Monthly</span>
+      </div>
+      <div class="worker-name">${w.first_name} ${w.surname}</div>
+      <div class="worker-detail">📍 <b>${w.village||'—'}</b></div>
+      <div class="worker-detail">🆔 <b>${fmtOmang(w.omang_number)}</b> &nbsp;·&nbsp; ${w.sex==='M'?'♂ Male':'♀ Female'} &nbsp;·&nbsp; Age: <b>${calcAge(w.date_of_birth)}</b></div>
+      <div class="worker-detail">📱 <b>${w.cellphone_number||'No phone'}</b> &nbsp;·&nbsp; 🎓 <b>${w.qualification}</b></div>
+      <div class="worker-detail">💰 <b>${mmp}</b></div>
+      <div class="worker-detail">📅 On list since: <b>${since}</b> &nbsp;·&nbsp; Added: <b>${added}</b></div>
+      ${w.notes ? `<div class="worker-notes">📝 ${w.notes}</div>` : ''}
+      <div class="card-footer">
+        <button class="edit-pill" onclick="openEdit('${w.id}')">Edit</button>
+        <button class="remove-pill" onclick="removeWorker('${w.id}','${w.first_name} ${w.surname}')">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Remove ──────────────────────────────────────────────────────────────────
+async function removeWorker(id, name){
+  if (!confirm(`Remove ${name} from special workers?`)) return;
+  const { error } = await sb.from('special_workers').delete().eq('id', id);
+  if (error){ showToast('Error: ' + error.message, 'error'); return; }
+  showToast(`${name} removed ✓`);
+  await loadList();
+}
+
+// ── Modal open/close ────────────────────────────────────────────────────────
+function openModal(){
+  _editId = null;
+  resetForm();
+  document.getElementById('modalTitle').textContent = 'Add Special Worker';
+  document.getElementById('saveBtn').textContent    = 'Add Special Worker';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function openEdit(id){
+  const w = _list.find(x => x.id === id);
+  if (!w) return;
+  _editId = id;
+  resetForm();
+  document.getElementById('modalTitle').textContent = 'Edit Special Worker';
+  document.getElementById('saveBtn').textContent    = 'Save Changes';
+  // Fill fields
+  document.getElementById('f-omang').value     = fmtOmang(w.omang_number);
+  document.getElementById('f-surname').value   = w.surname     || '';
+  document.getElementById('f-first').value     = w.first_name  || '';
+  document.getElementById('f-dob').value       = w.date_of_birth || '';
+  document.getElementById('f-village').value   = w.village     || '';
+  document.getElementById('f-phone').value     = w.cellphone_number || '';
+  document.getElementById('f-category').value  = w.category    || '';
+  document.getElementById('f-startdate').value = w.start_date  || '';
+  document.getElementById('f-notes').value     = w.notes       || '';
+  if (w.sex)                   setChipVal('sex',  w.sex);
+  if (w.mobile_money_provider) setChipVal('mmp',  w.mobile_money_provider);
+  if (w.qualification)         setChipVal('qual', w.qualification);
+  const hint = document.getElementById('omangHint');
+  hint.textContent = '✓ Valid'; hint.className = 'omang-hint valid';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('addModal').classList.remove('open');
+  _afCache = null; _editId = null;
+}
+
+function resetForm(){
+  ['f-omang','f-surname','f-first','f-dob','f-village','f-phone','f-startdate','f-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-category').value = '';
+  setChipVal('sex','M'); setChipVal('mmp','smega'); setChipVal('qual','PSLE');
+  document.getElementById('omangHint').textContent = 'Enter 9-digit Omang number';
+  document.getElementById('omangHint').className   = 'omang-hint';
+  document.getElementById('formErr').textContent   = '';
+  document.getElementById('autofillBox').style.display = 'none';
+  _afCache = null;
+}
+
+// ── Chip helpers ────────────────────────────────────────────────────────────
+function setChip(g, el){ document.querySelectorAll(`#chips-${g} .fchip`).forEach(c=>c.classList.remove('active')); el.classList.add('active'); }
+function setChipVal(g,v){ document.querySelectorAll(`#chips-${g} .fchip`).forEach(c=>c.classList.toggle('active', c.dataset.v===v)); }
+function getChip(g){ const a=document.querySelector(`#chips-${g} .fchip.active`); return a?a.dataset.v:''; }
+
+// ── Omang input + autofill ──────────────────────────────────────────────────
+function handleOmangInput(input){
+  if (_editId) return; // don't re-check during edit
+  input.value = fmtOmang(input.value);
+  const raw = rawOmang(input.value);
+  const hint = document.getElementById('omangHint');
+  const g = genderFromOmang(input.value);
+  if (g) setChipVal('sex', g);
+  if (raw.length < 9){ hint.textContent = `${raw.length}/9 digits`; hint.className = 'omang-hint'; document.getElementById('autofillBox').style.display='none'; return; }
+  if (!validOmang(input.value)){ hint.textContent = 'Invalid Omang'; hint.className = 'omang-hint invalid'; return; }
+  hint.textContent = '✓ Valid'; hint.className = 'omang-hint valid';
+  clearTimeout(_omangTimer);
+  _omangTimer = setTimeout(() => checkAutofill(raw), 700);
+}
+
+async function checkAutofill(omang){
+  const hint  = document.getElementById('omangHint');
+  const errEl = document.getElementById('formErr');
+  hint.textContent = 'Checking…'; hint.className = 'omang-hint checking';
+  errEl.textContent = '';
+  document.getElementById('autofillBox').style.display = 'none';
+
+  // ── 1. Already in special_workers? Block ──────────────────────────────
+  try {
+    const { data: existing } = await sb
+      .from('special_workers').select('id,first_name,surname')
+      .eq('omang_number', omang).maybeSingle();
+    if (existing){
+      hint.textContent  = '⚠ Already in special workers';
+      hint.className    = 'omang-hint invalid';
+      errEl.textContent = `${existing.first_name} ${existing.surname} is already on the special workers list.`;
+      return;
+    }
+  } catch(e){ console.warn('[autofill] special_workers check failed:', e); }
+
+  let src = null, sourceLabel = '';
+
+  // ── 2. Try worker_archive ─────────────────────────────────────────────
+  try {
+    const { data, error } = await sb
+      .from('worker_archive')
+      .select('omang_number,surname,first_name,date_of_birth,cellphone_number,sex,mobile_money_provider,qualification,village')
+      .eq('omang_number', omang)
+      .order('archived_at', { ascending: false })
+      .limit(1);
+    console.log('[autofill] worker_archive →', { data, error });
+    if (!error && data && data.length > 0){ src = data[0]; sourceLabel = 'worker archive'; }
+  } catch(e){ console.warn('[autofill] worker_archive exception:', e); }
+
+  // ── 3. Try waiting_list ───────────────────────────────────────────────
+  if (!src) {
+    try {
+      const { data, error } = await sb
+        .from('waiting_list')
+        .select('omang_number,surname,first_name,date_of_birth,cellphone_number,sex,mobile_money_provider,qualification,village')
+        .eq('omang_number', omang)
+        .limit(1);
+      console.log('[autofill] waiting_list →', { data, error });
+      if (!error && data && data.length > 0){ src = data[0]; sourceLabel = 'waiting list'; }
+    } catch(e){ console.warn('[autofill] waiting_list exception:', e); }
+  }
+
+  // ── 4. Try project_archive as last resort ────────────────────────────
+  if (!src) {
+    try {
+      const { data, error } = await sb
+        .from('project_archive')
+        .select('omang_number,surname,first_name,date_of_birth,cellphone_number,sex,mobile_money_provider,qualification')
+        .eq('omang_number', omang)
+        .order('archived_at', { ascending: false })
+        .limit(1);
+      console.log('[autofill] project_archive →', { data, error });
+      if (!error && data && data.length > 0){ src = data[0]; sourceLabel = 'project archive'; }
+    } catch(e){ console.warn('[autofill] project_archive exception:', e); }
+  }
+
+  console.log('[autofill] final src:', src, '| label:', sourceLabel);
+
+  if (src){
+    _afCache = {
+      omang_number:          omang,
+      surname:               src.surname               || '',
+      first_name:            src.first_name            || '',
+      date_of_birth:         src.date_of_birth         || '',
+      village:               src.village               || '',
+      cellphone_number:      src.cellphone_number      || '',
+      mobile_money_provider: src.mobile_money_provider || 'smega',
+      sex:                   src.sex                   || 'M',
+      qualification:         src.qualification         || 'PSLE',
+      _source: sourceLabel,
+    };
+    fillForm(_afCache);
+    hint.textContent = `↩ Found in ${sourceLabel} — fields filled`;
+    hint.className   = 'omang-hint valid';
+    document.getElementById('autofillText').innerHTML =
+      `<b>${_afCache.first_name} ${_afCache.surname}</b> — details pre-filled from ${sourceLabel}.`;
+    document.getElementById('autofillBox').style.display = 'block';
+    showToast(`${_afCache.first_name} ${_afCache.surname} — loaded from ${sourceLabel} ✓`, 'info');
+  } else {
+    _afCache = null;
+    hint.textContent = '✓ New worker — fill in details below';
+    hint.className   = 'omang-hint valid';
+  }
+}
+
+function fillForm(w){
+  document.getElementById('f-surname').value = w.surname            || '';
+  document.getElementById('f-first').value   = w.first_name         || '';
+  document.getElementById('f-dob').value     = w.date_of_birth      || '';
+  document.getElementById('f-village').value = w.village            || '';
+  document.getElementById('f-phone').value   = w.cellphone_number   || '';
+  // Sex: Omang digit is authoritative, then stored value
+  const detSex = genderFromOmang(w.omang_number || '') || w.sex || 'M';
+  setChipVal('sex', detSex);
+  if (w.mobile_money_provider) setChipVal('mmp',  w.mobile_money_provider);
+  if (w.qualification)         setChipVal('qual', w.qualification);
+}
+
+// ── Save (insert or update) ─────────────────────────────────────────────────
+async function saveWorker(){
+  const omang    = _editId ? rawOmang(document.getElementById('f-omang').value) : rawOmang(document.getElementById('f-omang').value);
+  const surname  = document.getElementById('f-surname').value.trim();
+  const first    = document.getElementById('f-first').value.trim();
+  const dob      = document.getElementById('f-dob').value.trim();
+  const village  = document.getElementById('f-village').value.trim();
+  const phone    = document.getElementById('f-phone').value.trim();
+  const category = document.getElementById('f-category').value;
+  const startDate= document.getElementById('f-startdate').value.trim();
+  const notes    = document.getElementById('f-notes').value.trim();
+  const errEl    = document.getElementById('formErr');
+  errEl.textContent = '';
+
+  if (!validOmang(omang))   { errEl.textContent = 'Omang number must be exactly 9 digits.'; return; }
+  if (!surname || !first)   { errEl.textContent = 'First and last name are required.'; return; }
+  if (!dob)                 { errEl.textContent = 'Date of birth is required.'; return; }
+  if (!village)             { errEl.textContent = 'Village is required.'; return; }
+  if (!category)            { errEl.textContent = 'Please select a category (VDC, Destitute, etc.).'; return; }
+  if (!notes)               { errEl.textContent = 'Please provide a reason / notes for this worker.'; return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const payload = {
+    omang_number:          omang,
+    surname,
+    first_name:            first,
+    date_of_birth:         dob,
+    village,
+    cellphone_number:      phone || null,
+    sex:                   getChip('sex'),
+    mobile_money_provider: getChip('mmp'),
+    qualification:         getChip('qual'),
+    category,
+    start_date:            startDate || null,
+    notes,
+  };
+
+  let error;
+  if (_editId){
+    ({ error } = await sb.from('special_workers').update(payload).eq('id', _editId));
+  } else {
+    ({ error } = await sb.from('special_workers').insert(payload));
+  }
+
+  btn.disabled = false; btn.textContent = _editId ? 'Save Changes' : 'Add Special Worker';
+  if (error){ errEl.textContent = 'Error: ' + error.message; return; }
+  closeModal();
+  showToast(`${first} ${surname} ${_editId ? 'updated' : 'added'} ✓`, 'success');
+  await loadList();
+}
+
+// ── Toast ───────────────────────────────────────────────────────────────────
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+init();
+</script>
+</body>
+</html>

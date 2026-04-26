@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archive — Ikageng VDC</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:      #09100f;
+    --surface: #111a18;
+    --s2:      #18241f;
+    --s3:      #1c2a25;
+    --border:  #1e2d28;
+    --border2: #243830;
+    --accent:  #00c98a;
+    --gold:    #e8b84b;
+    --blue:    #4fc0d4;
+    --red:     #f06060;
+    --text:    #dff0eb;
+    --muted:   #6b8c84;
+    --green:   #2c5530;
+    --green2:  #34623a;
+    --green3:  #3d6f44;
+    --sup:     #d4a574;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 60%, var(--green3) 100%);
+    padding: 1.4rem 1.5rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .back-btn {
+    background: rgba(255,255,255,.18);
+    border: none;
+    color: #fff;
+    padding: .42rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    font-weight: 500;
+    transition: background .15s;
+    flex-shrink: 0;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+  }
+  .back-btn:hover { background: rgba(255,255,255,.28); }
+  .header-text { flex: 1; min-width: 0; }
+  .header-text h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(.95rem, 4vw, 1.25rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .header-text p {
+    font-size: .65rem;
+    color: rgba(255,255,255,.75);
+    margin-top: .18rem;
+    letter-spacing: .04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Project strip ── */
+  .project-strip {
+    background: rgba(0,201,138,.06);
+    border-bottom: 1px solid rgba(0,201,138,.15);
+    padding: .5rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .65rem;
+  }
+  .project-strip-label  { color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+  .project-strip-name   { color: var(--accent); font-weight: 500; }
+  .project-strip-period { color: var(--muted); }
+
+  /* ── Body ── */
+  .body { padding: 1.5rem; max-width: 720px; margin: 0 auto; }
+
+  /* ── Info banner ── */
+  .info-banner {
+    background: rgba(0,201,138,.05);
+    border: 1px solid rgba(0,201,138,.18);
+    border-radius: 10px;
+    padding: .85rem 1rem;
+    font-size: .7rem;
+    color: var(--muted);
+    line-height: 1.75;
+    margin-bottom: 1.4rem;
+  }
+  .info-banner strong { color: var(--accent); }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: .58rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .65rem;
+    margin-top: 1.4rem;
+  }
+  .section-label:first-of-type { margin-top: 0; }
+
+  /* ── Archive action card ── */
+  .action-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1rem;
+  }
+  .action-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .action-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: .22rem;
+  }
+  .action-card-desc {
+    font-size: .65rem;
+    color: var(--muted);
+    line-height: 1.65;
+    max-width: 340px;
+  }
+  .action-btns { display: flex; gap: .6rem; flex-wrap: wrap; flex-shrink: 0; margin-top: .15rem; }
+
+  /* ── Buttons ── */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .45rem 1rem;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem;
+    font-weight: 500;
+    letter-spacing: .04em;
+    cursor: pointer;
+    border: none;
+    transition: opacity .15s, transform .1s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .pill:active { transform: scale(.97); }
+  .pill-primary  { background: var(--accent); color: #001a10; }
+  .pill-primary:hover { opacity: .85; }
+  .pill-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .pill-ghost    { background: transparent; border: 1px solid var(--border2); color: var(--muted); }
+  .pill-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .pill-danger   { background: transparent; border: 1px solid rgba(240,96,96,.3); color: var(--red); }
+  .pill-danger:hover { background: rgba(240,96,96,.08); }
+
+  /* ── Progress bar ── */
+  .progress-wrap {
+    display: none;
+    margin-top: 1rem;
+    background: var(--s2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .75rem 1rem;
+  }
+  .progress-wrap.visible { display: block; }
+  .progress-label {
+    font-size: .65rem;
+    color: var(--muted);
+    margin-bottom: .55rem;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-label span { color: var(--accent); }
+  .progress-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    width: 0%;
+    transition: width .3s ease;
+  }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .75rem;
+    margin-bottom: 1.2rem;
+  }
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .85rem .75rem;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Fraunces', serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-lbl {
+    font-size: .56rem;
+    color: var(--muted);
+    margin-top: .3rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .filter-bar select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem;
+    padding: .4rem .7rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .filter-bar select:hover,
+  .filter-bar select:focus { border-color: var(--accent); }
+  .filter-bar label { font-size: .62rem; color: var(--muted); white-space: nowrap; }
+
+  /* ── Snapshot group ── */
+  .snapshot {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: .85rem;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .snapshot:hover { border-color: var(--border2); }
+  .snapshot-header {
+    padding: .9rem 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .snapshot-header:hover { background: rgba(255,255,255,.02); }
+  .snapshot-left { flex: 1; min-width: 0; }
+  .snapshot-project {
+    font-family: 'Fraunces', serif;
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .snapshot-meta {
+    font-size: .6rem;
+    color: var(--muted);
+    margin-top: .2rem;
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    flex-wrap: wrap;
+  }
+  .snapshot-meta .dot { color: var(--border2); }
+  .badge {
+    display: inline-block;
+    font-size: .52rem;
+    padding: .1rem .45rem;
+    border-radius: 10px;
+    border: 1px solid;
+    letter-spacing: .05em;
+    vertical-align: middle;
+  }
+  .badge-green { background: rgba(0,201,138,.1);  color: var(--accent); border-color: rgba(0,201,138,.25); }
+  .badge-gold  { background: rgba(232,184,75,.1); color: var(--gold);   border-color: rgba(232,184,75,.25); }
+  .badge-blue  { background: rgba(79,192,212,.1); color: var(--blue);   border-color: rgba(79,192,212,.25); }
+
+  .snapshot-actions { display: flex; gap: .5rem; align-items: center; flex-shrink: 0; }
+  .snapshot-chevron {
+    color: var(--muted);
+    font-size: .75rem;
+    transition: transform .25s;
+    flex-shrink: 0;
+  }
+  .snapshot.open .snapshot-chevron { transform: rotate(90deg); }
+
+  .snapshot-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.1rem;
+    animation: fadeDown .18s ease;
+  }
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);} }
+  .snapshot.open .snapshot-body { display: block; }
+
+  /* ── Group block inside snapshot ── */
+  .group-block {
+    background: var(--s2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: .7rem;
+    overflow: hidden;
+  }
+  .group-block:last-child { margin-bottom: 0; }
+  .group-header {
+    padding: .6rem .85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    cursor: pointer;
+    user-select: none;
+    background: rgba(0,201,138,.03);
+  }
+  .group-header:hover { background: rgba(0,201,138,.06); }
+  .group-name {
+    font-size: .77rem;
+    font-weight: 500;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .group-location { font-size: .6rem; color: var(--muted); }
+  .group-chevron {
+    color: var(--muted);
+    font-size: .65rem;
+    transition: transform .2s;
+    flex-shrink: 0;
+  }
+  .group-block.open .group-chevron { transform: rotate(90deg); }
+  .group-members {
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+  .group-block.open .group-members { display: block; }
+
+  /* ── Member row ── */
+  .member-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: .5rem .85rem;
+    border-bottom: 1px solid rgba(30,45,40,.6);
+    font-size: .67rem;
+    gap: .5rem;
+  }
+  .member-row:last-child { border-bottom: none; }
+  .member-name  { color: var(--text); font-weight: 500; }
+  .member-omang { color: var(--muted); font-size: .6rem; }
+  .member-sup-badge {
+    font-size: .52rem;
+    background: rgba(212,165,116,.12);
+    color: var(--sup);
+    border: 1px solid rgba(212,165,116,.25);
+    padding: .1rem .4rem;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* ── Empty & loading ── */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+  .empty-state h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    color: var(--text);
+    margin-bottom: .5rem;
+  }
+  .empty-state p { font-size: .72rem; line-height: 1.7; }
+
+  .loading-row {
+    text-align: center;
+    padding: 2.5rem;
+    color: var(--muted);
+    font-size: .72rem;
+  }
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin .65s linear infinite;
+    margin-bottom: .6rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Loading screen ── */
+  .loading-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: .8rem; z-index: 100;
+  }
+  .loading-screen .spinner { width: 32px; height: 32px; border-width: 3px; }
+  .loading-text { font-size: .75rem; color: var(--muted); letter-spacing: .1em; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.78);
+    z-index: 50; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.6rem 1.8rem;
+    width: min(400px, 95vw);
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+  .modal h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    color: var(--red);
+    margin-bottom: .7rem;
+  }
+  .modal p { font-size: .75rem; color: var(--muted); line-height: 1.7; margin-bottom: 1.2rem; }
+  .modal-btns { display: flex; gap: .75rem; }
+  .modal-cancel {
+    flex: 1; padding: .6rem;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: .72rem;
+  }
+  .modal-cancel:hover { border-color: var(--accent); color: var(--accent); }
+  .modal-confirm {
+    flex: 1; padding: .6rem;
+    background: var(--red); border: none;
+    border-radius: 6px; cursor: pointer;
+    color: #fff; font-family: 'DM Mono', monospace; font-size: .72rem; font-weight: 500;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--s2); border: 1px solid var(--border);
+    border-radius: 8px; padding: .7rem 1rem;
+    font-size: .7rem; color: var(--text);
+    z-index: 999; animation: fadeIn .2s ease;
+    max-width: 280px; line-height: 1.5;
+  }
+  .toast.success { border-color: rgba(0,201,138,.4); color: var(--accent); }
+  .toast.error   { border-color: rgba(240,96,96,.4);  color: var(--red); }
+  .toast.info    { border-color: rgba(79,192,212,.4); color: var(--blue); }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+
+  @media(max-width: 400px) {
+    .stats-row { grid-template-columns: repeat(3,1fr); }
+    .stat-num { font-size: 1.4rem; }
+    .action-card-top { flex-direction: column; }
+    .action-btns { width: 100%; }
+    .pill { flex: 1; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading archive…</div>
+</div>
+
+<!-- ── Header ── -->
+<div class="header">
+  <a class="back-btn" id="backBtn" href="vdc-dashboard.html">← Back</a>
+  <div class="header-text">
+    <h1>Project Archive</h1>
+    <p id="headerSub">Snapshots of all archived projects</p>
+  </div>
+</div>
+
+<!-- ── Project strip ── -->
+<div class="project-strip" id="projectStrip" style="display:none">
+  <span class="project-strip-label">Current project:</span>
+  <span class="project-strip-name"  id="stripName">—</span>
+  <span class="project-strip-period" id="stripPeriod"></span>
+</div>
+
+<!-- ── Main body ── -->
+<div class="body">
+
+  <div class="info-banner">
+    <strong>What is the archive?</strong> Archiving a project takes a <strong>snapshot</strong> of all its groups and members into <code>project_archive</code>. Live data is never deleted. A project can be archived <strong>multiple times</strong> — each snapshot is independent and timestamped.
+  </div>
+
+  <!-- Archive current project panel -->
+  <div id="currentProjectPanel" style="display:none">
+    <div class="section-label">Archive This Project</div>
+    <div class="action-card">
+      <div class="action-card-top">
+        <div>
+          <div class="action-card-title" id="archiveProjectTitle">—</div>
+          <div class="action-card-desc">Take a snapshot of all groups and members in this project. The live data stays untouched.</div>
+        </div>
+        <div class="action-btns">
+          <button class="pill pill-primary" id="archiveBtn" onclick="archiveCurrentProject()">📦 Archive Project</button>
+          <button class="pill pill-ghost"   onclick="exportCurrentCSV()">⬇ Export CSV</button>
+        </div>
+      </div>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label">
+          <span id="progressLabel">Archiving…</span>
+          <span id="progressCount">0 / 0</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section-label">Archive Overview</div>
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num" id="statSnapshots">—</div><div class="stat-lbl">Snapshots</div></div>
+    <div class="stat-box"><div class="stat-num" id="statGroups">—</div><div class="stat-lbl">Groups</div></div>
+    <div class="stat-box"><div class="stat-num" id="statMembers">—</div><div class="stat-lbl">Members</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <label>Filter by project:</label>
+    <select id="filterProject" onchange="renderSnapshots()"><option value="">All projects</option></select>
+    <label style="margin-left:.4rem">Year:</label>
+    <select id="filterYear"    onchange="renderSnapshots()"><option value="">All years</option></select>
+  </div>
+
+  <!-- Snapshots -->
+  <div class="section-label">Snapshots</div>
+  <div id="snapshotList">
+    <div class="loading-row"><div class="spinner"></div><br>Loading snapshots…</div>
+  </div>
+
+</div>
+
+<!-- Delete modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>🗑 Delete Snapshot?</h3>
+    <p id="deleteModalDesc">This snapshot will be permanently removed from the archive. The live project data is unaffected.</p>
+    <div class="modal-btns">
+      <button class="modal-cancel"  onclick="closeDeleteModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+
+let currentProject         = null;
+let currentProjectGroupIds = [];
+let allArchiveRows         = [];
+let snapshotMap            = {};
+let pendingDeleteKey       = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('backBtn').href =
+    PROJECT_ID ? `vdc-dashboard.html?project=${PROJECT_ID}` : 'vdc-dashboard.html';
+
+  if (PROJECT_ID) await loadCurrentProject();
+  await loadArchive();
+  document.getElementById('loadingScreen').style.display = 'none';
+}
+
+// ── Load current project ──────────────────────────────────────────────────────
+async function loadCurrentProject() {
+  const { data, error } = await sb.from('projects').select('*').eq('id', PROJECT_ID).single();
+  if (error || !data) { showToast('Project not found', 'error'); return; }
+
+  currentProject = data;
+  const period = [data.month, data.year].filter(Boolean).join(' ');
+
+  document.getElementById('projectStrip').style.display    = 'flex';
+  document.getElementById('stripName').textContent         = data.project_name;
+  document.getElementById('stripPeriod').textContent       = period ? `· ${period}` : '';
+  document.getElementById('headerSub').textContent         = `Archiving: ${data.project_name}`;
+  document.getElementById('currentProjectPanel').style.display = 'block';
+  document.getElementById('archiveProjectTitle').textContent   = data.project_name + (period ? ` — ${period}` : '');
+
+  const { data: groups } = await sb.from('groups').select('id').eq('project_id', PROJECT_ID);
+  currentProjectGroupIds = (groups || []).map(g => g.id);
+}
+
+// ── Load archive ──────────────────────────────────────────────────────────────
+async function loadArchive() {
+  const { data, error } = await sb
+    .from('project_archive').select('*').order('archived_at', { ascending: false });
+
+  if (error) {
+    document.getElementById('snapshotList').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">⚠️</div><h3>Error loading archive</h3><p>${error.message}</p></div>`;
+    return;
+  }
+
+  allArchiveRows = data || [];
+  buildSnapshotMap();
+  updateStats();
+  populateFilters();
+  renderSnapshots();
+}
+
+// ── Build snapshot map ────────────────────────────────────────────────────────
+function buildSnapshotMap() {
+  snapshotMap = {};
+  for (const row of allArchiveRows) {
+    const dateKey = row.archived_at ? row.archived_at.slice(0, 10) : 'unknown';
+    const key     = `${row.project_id}::${dateKey}`;
+
+    if (!snapshotMap[key]) {
+      snapshotMap[key] = {
+        key, project_id: row.project_id, project_name: row.project_name,
+        month: row.month, year: row.year, description: row.description,
+        archived_at: row.archived_at, date_key: dateKey, groups: {}
+      };
+    }
+
+    const snap = snapshotMap[key];
+    if (!snap.groups[row.group_id]) {
+      snap.groups[row.group_id] = {
+        group_id: row.group_id, group_name: row.group_name,
+        location: row.location, members: []
+      };
+    }
+
+    snap.groups[row.group_id].members.push({
+      member_id:    row.member_id,      first_name:  row.first_name,
+      surname:      row.surname,         omang_number: row.omang_number,
+      is_supervisor: row.is_supervisor,  position:    row.position,
+      sex:          row.sex,             qualification: row.qualification,
+      date_of_birth: row.date_of_birth,
+      cellphone_number: row.cellphone_number,
+      mobile_money_provider: row.mobile_money_provider,
+      // ── The hire date stored when member was archived ──────────────────
+      last_worked_date: row.last_worked_date
+    });
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const groupSet = new Set(allArchiveRows.map(r => `${r.project_id}::${r.group_id}`));
+  document.getElementById('statSnapshots').textContent = Object.keys(snapshotMap).length;
+  document.getElementById('statGroups').textContent    = groupSet.size;
+  document.getElementById('statMembers').textContent   = allArchiveRows.length;
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function populateFilters() {
+  const projects = [...new Map(allArchiveRows.map(r => [r.project_id, r.project_name])).entries()];
+  const years    = [...new Set(allArchiveRows.map(r => r.year).filter(Boolean))].sort().reverse();
+
+  const ps = document.getElementById('filterProject');
+  projects.forEach(([id, name]) => {
+    const o = document.createElement('option'); o.value = id; o.textContent = name; ps.appendChild(o);
+  });
+
+  const ys = document.getElementById('filterYear');
+  years.forEach(y => {
+    const o = document.createElement('option'); o.value = y; o.textContent = y; ys.appendChild(o);
+  });
+}
+
+// ── Render snapshots ──────────────────────────────────────────────────────────
+function renderSnapshots() {
+  const fp = document.getElementById('filterProject').value;
+  const fy = document.getElementById('filterYear').value;
+
+  let snaps = Object.values(snapshotMap);
+  if (fp) snaps = snaps.filter(s => s.project_id === fp);
+  if (fy) snaps = snaps.filter(s => s.year === fy);
+  snaps.sort((a, b) => new Date(b.archived_at) - new Date(a.archived_at));
+
+  const container = document.getElementById('snapshotList');
+  if (!snaps.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🗃️</div>
+        <h3>No snapshots yet</h3>
+        <p>Archive a project above to create the first snapshot.</p>
+      </div>`;
+    return;
+  }
+  container.innerHTML = snaps.map(buildSnapshotHTML).join('');
+}
+
+function buildSnapshotHTML(snap) {
+  const groups   = Object.values(snap.groups);
+  const totalMem = groups.reduce((n, g) => n + g.members.length, 0);
+  const period   = [snap.month, snap.year].filter(Boolean).join(' ');
+  const dateStr  = snap.archived_at
+    ? new Date(snap.archived_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : 'Unknown date';
+
+  const groupsHTML = groups.map(g => `
+    <div class="group-block" id="gb-${g.group_id}-${snap.date_key}">
+      <div class="group-header" onclick="toggleGroup('gb-${g.group_id}-${snap.date_key}')">
+        <div>
+          <div class="group-name">👥 ${esc(g.group_name)} <span class="badge badge-blue">${g.members.length} members</span></div>
+          <div class="group-location">${g.location ? '📍 ' + esc(g.location) : ''}</div>
+        </div>
+        <span class="group-chevron">›</span>
+      </div>
+      <div class="group-members">
+        ${g.members.map(m => {
+          const hireDate = m.last_worked_date
+            ? new Date(m.last_worked_date).toLocaleDateString('en-ZA')
+            : '—';
+          return `<div class="member-row">
+            <div>
+              <div class="member-name">${esc(m.first_name)} ${esc(m.surname)}</div>
+              <div class="member-omang">
+                Omang: ${esc(m.omang_number)}
+                ${m.sex ? ' · ' + m.sex : ''}
+                ${m.qualification ? ' · ' + esc(m.qualification) : ''}
+                · Hired: ${hireDate}
+              </div>
+            </div>
+            ${m.is_supervisor ? '<span class="member-sup-badge">Supervisor</span>' : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="snapshot" id="snap-${snap.key.replace(/[^a-z0-9]/gi,'-')}">
+      <div class="snapshot-header" onclick="toggleSnapshot(this)">
+        <div class="snapshot-left">
+          <div class="snapshot-project">${esc(snap.project_name)}</div>
+          <div class="snapshot-meta">
+            ${period ? `<span class="badge badge-gold">${esc(period)}</span><span class="dot">·</span>` : ''}
+            <span>${groups.length} groups</span>
+            <span class="dot">·</span>
+            <span>${totalMem} members</span>
+            <span class="dot">·</span>
+            <span>Archived ${dateStr}</span>
+          </div>
+        </div>
+        <div class="snapshot-actions" onclick="event.stopPropagation()">
+          <button class="pill pill-ghost"  style="font-size:.6rem;padding:.32rem .7rem" onclick="exportSnapshotCSV('${snap.key}')">⬇ CSV</button>
+          <button class="pill pill-danger" style="font-size:.6rem;padding:.32rem .7rem" onclick="openDeleteModal('${snap.key}','${esc(snap.project_name)}','${snap.date_key}')">🗑</button>
+        </div>
+        <span class="snapshot-chevron">›</span>
+      </div>
+      <div class="snapshot-body">
+        ${groupsHTML || '<div style="color:var(--muted);font-size:.7rem;padding:.5rem">No groups in this snapshot.</div>'}
+      </div>
+    </div>`;
+}
+
+function toggleSnapshot(headerEl) { headerEl.closest('.snapshot').classList.toggle('open'); }
+function toggleGroup(id)          { document.getElementById(id).classList.toggle('open'); }
+
+// ── Archive current project ───────────────────────────────────────────────────
+async function archiveCurrentProject() {
+  if (!currentProject) return;
+  const btn = document.getElementById('archiveBtn');
+  btn.disabled = true;
+
+  const { data: groups, error: gErr } = await sb
+    .from('groups').select('*').eq('project_id', PROJECT_ID);
+  if (gErr || !groups?.length) {
+    showToast('No groups found in this project', 'info');
+    btn.disabled = false; return;
+  }
+
+  const { data: members, error: mErr } = await sb
+    .from('members').select('*').in('group_id', groups.map(g => g.id));
+  if (mErr) {
+    showToast('Error fetching members: ' + mErr.message, 'error');
+    btn.disabled = false; return;
+  }
+
+  const groupMap = Object.fromEntries(groups.map(g => [g.id, g]));
+  const rows = (members || []).map(m => {
+    const grp = groupMap[m.group_id] || {};
+    return {
+      project_id:   currentProject.id,
+      project_name: currentProject.project_name,
+      month:        currentProject.month,
+      year:         currentProject.year,
+      description:  currentProject.description,
+      group_id:     m.group_id,
+      group_name:   grp.group_name || '',
+      location:     grp.location   || '',
+      member_id:    m.id,
+      omang_number: m.omang_number,
+      first_name:   m.first_name,
+      surname:      m.surname,
+      date_of_birth: m.date_of_birth,
+      sex:           m.sex,
+      cellphone_number:      m.cellphone_number,
+      mobile_money_provider: m.mobile_money_provider,
+      qualification: m.qualification,
+      is_supervisor: m.is_supervisor,
+      position:      m.position,
+      // ── members.created_at = when they joined/were hired ─────────────────
+      last_worked_date: m.created_at ? new Date(m.created_at).toISOString() : null
+    };
+  });
+
+  if (!rows.length) {
+    showToast('No members to archive in this project', 'info');
+    btn.disabled = false; return;
+  }
+
+  const BATCH = 500;
+  const wrap  = document.getElementById('progressWrap');
+  const fill  = document.getElementById('progressFill');
+  const lbl   = document.getElementById('progressLabel');
+  const cnt   = document.getElementById('progressCount');
+  wrap.classList.add('visible');
+
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH);
+    const { error } = await sb.from('project_archive').insert(chunk);
+    if (error) {
+      showToast('Error archiving: ' + error.message, 'error');
+      wrap.classList.remove('visible');
+      btn.disabled = false; return;
+    }
+    inserted += chunk.length;
+    const pct = Math.round((inserted / rows.length) * 100);
+    fill.style.width = pct + '%';
+    lbl.textContent  = `Archiving… ${pct}%`;
+    cnt.textContent  = `${inserted} / ${rows.length}`;
+  }
+
+  lbl.textContent = '✓ Archive complete!';
+  cnt.textContent = `${inserted} rows`;
+  showToast(`Archived ${inserted} members across ${groups.length} groups ✓`, 'success');
+
+  await loadArchive();
+  setTimeout(() => {
+    wrap.classList.remove('visible');
+    fill.style.width = '0%';
+    btn.disabled = false;
+  }, 2500);
+}
+
+// ── Export current project CSV (live data) ────────────────────────────────────
+async function exportCurrentCSV() {
+  if (!currentProjectGroupIds.length) { showToast('No groups in this project', 'info'); return; }
+  showToast('Preparing export…', 'info');
+  const { data } = await sb
+    .from('members').select('*, groups(group_name, location)')
+    .in('group_id', currentProjectGroupIds).order('created_at');
+  downloadCSV(data || [], `${currentProject.project_name.replace(/\s+/g,'_')}_members.csv`);
+  showToast('Exported ✓');
+}
+
+// ── Export snapshot CSV ───────────────────────────────────────────────────────
+function exportSnapshotCSV(key) {
+  const snap = snapshotMap[key];
+  if (!snap) return;
+  const rows = [];
+  Object.values(snap.groups).forEach(g => {
+    g.members.forEach(m => {
+      rows.push({
+        project_name: snap.project_name, month: snap.month || '', year: snap.year || '',
+        group_name:  g.group_name, location: g.location,
+        first_name:  m.first_name, surname:  m.surname,
+        omang_number: m.omang_number, sex: m.sex,
+        date_of_birth: m.date_of_birth, qualification: m.qualification,
+        cellphone_number: m.cellphone_number,
+        mobile_money_provider: m.mobile_money_provider,
+        is_supervisor: m.is_supervisor, position: m.position,
+        // hire date included in export
+        last_worked_date: m.last_worked_date || '',
+        archived_at: snap.archived_at
+      });
+    });
+  });
+  downloadCSV(rows, `archive_${snap.project_name.replace(/\s+/g,'_')}_${snap.date_key}.csv`);
+  showToast('Snapshot exported ✓');
+}
+
+// ── Delete snapshot ───────────────────────────────────────────────────────────
+function openDeleteModal(key, projectName, dateKey) {
+  pendingDeleteKey = key;
+  document.getElementById('deleteModalDesc').textContent =
+    `Delete the snapshot of "${projectName}" taken on ${dateKey}? This cannot be undone.`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+  pendingDeleteKey = null;
+}
+async function confirmDelete() {
+  if (!pendingDeleteKey) return;
+  const snap = snapshotMap[pendingDeleteKey];
+  if (!snap) { closeDeleteModal(); return; }
+  closeDeleteModal();
+  showToast('Deleting snapshot…', 'info');
+
+  const dateStart = snap.date_key + 'T00:00:00.000Z';
+  const dateEnd   = snap.date_key + 'T23:59:59.999Z';
+  const { error } = await sb.from('project_archive').delete()
+    .eq('project_id', snap.project_id)
+    .gte('archived_at', dateStart)
+    .lte('archived_at', dateEnd);
+
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast('Snapshot deleted', 'error');
+  await loadArchive();
+}
+
+// ── CSV helper ────────────────────────────────────────────────────────────────
+function downloadCSV(rows, filename) {
+  if (!rows.length) { showToast('No data', 'info'); return; }
+  const keys = Object.keys(rows[0]);
+  const csv  = [
+    keys.join(','),
+    ...rows.map(r => keys.map(k => `"${(r[k] ?? '').toString().replace(/"/g,'""')}"`).join(','))
+  ].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = filename;
+  a.click();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+// ── Escape HTML ───────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>

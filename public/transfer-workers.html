@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Transfer Workers</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;
+    --orange:#fd7e14;--text:#dff0eb;--muted:#6b8c84;
+    --green:#2c5530;--green2:#34623a;--green3:#3d6f44;--sup:#d4a574;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
+
+  .header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 60%,var(--green3) 100%);padding:1.6rem 1.5rem 1.4rem;display:flex;align-items:center;gap:1rem;}
+  .logo-circle{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--green);flex-shrink:0;}
+  .header-text{flex:1;min-width:0;}
+  .header-text h1{font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.35rem);font-weight:700;color:#fff;line-height:1.2;}
+  .header-text p{font-size:.67rem;color:rgba(255,255,255,.8);margin-top:.2rem;letter-spacing:.04em;}
+  .back-pill{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.42rem 1rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;flex-shrink:0;}
+  .back-pill:hover{background:rgba(255,255,255,.28);}
+
+  .scroll-body{padding:1.5rem;}
+
+  /* Step cards */
+  .step-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.3rem 1.4rem;margin-bottom:1.2rem;}
+  .step-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;}
+  .step-num{width:28px;height:28px;border-radius:50%;background:var(--green);border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:500;color:var(--accent);flex-shrink:0;}
+  .step-title{font-size:.8rem;font-weight:500;color:var(--text);}
+  .step-sub{font-size:.62rem;color:var(--muted);margin-top:.1rem;}
+
+  /* Project selector */
+  .proj-grid{display:grid;gap:.65rem;}
+  .proj-row{display:flex;align-items:center;gap:.75rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;cursor:pointer;transition:all .15s;}
+  .proj-row:hover{border-color:var(--accent);}
+  .proj-row.selected{border-color:var(--accent);background:rgba(0,201,138,.06);}
+  .proj-radio{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:all .15s;}
+  .proj-row.selected .proj-radio{border-color:var(--accent);background:var(--accent);}
+  .proj-info{flex:1;min-width:0;}
+  .proj-name{font-size:.78rem;color:var(--text);}
+  .proj-period{font-size:.6rem;color:var(--muted);margin-top:.15rem;}
+  .proj-count{font-size:.6rem;background:rgba(0,201,138,.08);border:1px solid rgba(0,201,138,.2);color:var(--accent);padding:.12rem .55rem;border-radius:8px;white-space:nowrap;}
+
+  /* Worker list */
+  .worker-row{display:flex;align-items:center;gap:.75rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;margin-bottom:.5rem;transition:all .15s;}
+  .worker-row.skip{opacity:.4;pointer-events:none;}
+  .wchk{width:16px;height:16px;border-radius:4px;border:2px solid var(--border);flex-shrink:0;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+  .wchk.checked{background:var(--accent);border-color:var(--accent);}
+  .wchk.checked::after{content:'✓';font-size:.65rem;color:#001a10;font-weight:700;}
+  .winfo{flex:1;min-width:0;}
+  .wname{font-size:.78rem;color:var(--text);}
+  .wmeta{font-size:.6rem;color:var(--muted);margin-top:.12rem;}
+  .skip-badge{font-size:.52rem;padding:.1rem .45rem;border-radius:6px;background:rgba(253,126,20,.1);color:var(--orange);border:1px solid rgba(253,126,20,.3);white-space:nowrap;flex-shrink:0;}
+  .hired-badge{font-size:.52rem;padding:.1rem .45rem;border-radius:6px;background:rgba(240,96,96,.1);color:var(--red);border:1px solid rgba(240,96,96,.3);white-space:nowrap;flex-shrink:0;}
+
+  /* Action bar */
+  .action-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;flex-wrap:wrap;gap:.5rem;}
+  .sel-all-btn{font-size:.63rem;color:var(--blue);cursor:pointer;background:none;border:none;font-family:'DM Mono',monospace;padding:0;text-decoration:underline;}
+  .sel-count{font-size:.63rem;color:var(--muted);}
+
+  /* Target project */
+  .target-box{background:rgba(232,184,75,.05);border:1px solid rgba(232,184,75,.2);border-radius:10px;padding:1rem 1.1rem;display:flex;align-items:center;gap:.75rem;}
+  .target-icon{font-size:1.3rem;flex-shrink:0;}
+  .target-info{flex:1;}
+  .target-name{font-size:.82rem;color:var(--gold);font-weight:500;}
+  .target-period{font-size:.62rem;color:var(--muted);margin-top:.1rem;}
+  .target-change{font-size:.6rem;color:var(--blue);cursor:pointer;background:none;border:none;font-family:'DM Mono',monospace;text-decoration:underline;margin-top:.25rem;display:block;}
+
+  /* Summary */
+  .summary-box{background:rgba(0,201,138,.05);border:1px solid rgba(0,201,138,.2);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.2rem;}
+  .summary-row{display:flex;justify-content:space-between;align-items:center;font-size:.7rem;padding:.25rem 0;border-bottom:1px solid rgba(0,201,138,.08);}
+  .summary-row:last-child{border-bottom:none;}
+  .summary-row .lbl{color:var(--muted);}
+  .summary-row .val{color:var(--text);font-weight:500;}
+  .summary-row .val.ac{color:var(--accent);}
+  .summary-row .val.or{color:var(--orange);}
+
+  /* Transfer button */
+  .transfer-btn{width:100%;padding:1rem;background:var(--accent);border:none;border-radius:10px;color:#001a10;font-family:'DM Mono',monospace;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .2s;letter-spacing:.04em;}
+  .transfer-btn:hover{opacity:.88;}
+  .transfer-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* Info notice */
+  .info-notice{background:rgba(79,192,212,.05);border:1px solid rgba(79,192,212,.18);border-radius:9px;padding:.7rem 1rem;margin-bottom:1.2rem;font-size:.65rem;color:var(--blue);line-height:1.7;display:flex;gap:.6rem;}
+  .info-notice .in-icon{flex-shrink:0;margin-top:.05rem;}
+
+  /* Loading */
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:.78rem;color:var(--muted);letter-spacing:.1em;}
+
+  /* Toast */
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1.1rem;font-size:.72rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:300px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
+  .toast.info{border-color:rgba(79,192,212,.4);color:var(--blue);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  .section-label{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem;}
+  .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--muted);font-size:.75rem;font-style:italic;}
+  .divider{height:1px;background:var(--border);margin:1.2rem 0;}
+
+  /* Search */
+  .search-wrap{position:relative;margin-bottom:.9rem;}
+  .search-wrap input{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.76rem;padding:.6rem 1rem .6rem 2.3rem;border-radius:8px;outline:none;transition:border-color .15s;}
+  .search-wrap input:focus{border-color:var(--accent);}
+  .search-wrap input::placeholder{color:var(--muted);}
+  .search-icon{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.85rem;pointer-events:none;}
+
+  /* Result */
+  .result-screen{display:none;text-align:center;padding:2rem 1rem;}
+  .result-screen.show{display:block;}
+  .result-icon{font-size:3rem;margin-bottom:.75rem;}
+  .result-title{font-family:'Fraunces',serif;font-size:1.3rem;color:var(--accent);margin-bottom:.5rem;}
+  .result-sub{font-size:.72rem;color:var(--muted);line-height:1.8;}
+  .result-again{margin-top:1.2rem;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:.72rem;padding:.55rem 1.2rem;border-radius:8px;cursor:pointer;}
+  .result-again:hover{border-color:var(--accent);color:var(--accent);}
+
+  .step-disabled{opacity:.45;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading transfer tool…</div>
+</div>
+
+<div class="header">
+  <div class="logo-circle">IK</div>
+  <div class="header-text">
+    <h1>Transfer Workers</h1>
+    <p>Copy remaining workers to a new project's waiting list</p>
+  </div>
+  <a class="back-pill" id="backBtn" href="waitinglist.html">← Back</a>
+</div>
+
+<div class="scroll-body">
+
+  <div class="info-notice">
+    <span class="in-icon">ℹ️</span>
+    <span>
+      This tool copies workers from one project's waiting list into another project's waiting list.
+      Workers already hired in the target project (found in <strong>members</strong> or <strong>project_archive</strong>) are automatically skipped.
+      Original list is <strong>not changed</strong> — this is a copy only.
+    </span>
+  </div>
+
+  <!-- RESULT SCREEN -->
+  <div class="result-screen" id="resultScreen">
+    <div class="result-icon">✅</div>
+    <div class="result-title" id="resultTitle">Transfer Complete!</div>
+    <div class="result-sub" id="resultSub">Workers transferred successfully.</div>
+    <button class="result-again" onclick="resetTool()">↩ Transfer More Workers</button>
+  </div>
+
+  <!-- MAIN FLOW -->
+  <div id="mainFlow">
+
+    <!-- STEP 1: Source project -->
+    <div class="step-card" id="step1Card">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">Select Source Waiting List</div>
+          <div class="step-sub">Which project's waiting list do you want to transfer <em>from</em>?</div>
+        </div>
+      </div>
+      <div class="proj-grid" id="sourceGrid">
+        <div class="empty-state">Loading projects…</div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Workers to transfer -->
+    <div class="step-card step-disabled" id="step2Card">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Select Workers to Transfer</div>
+          <div class="step-sub">Workers already hired in the target project will be auto-skipped.</div>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="workerSearch" placeholder="Search workers…" oninput="renderWorkers()">
+      </div>
+      <div class="action-bar">
+        <button class="sel-all-btn" onclick="selectAll()">Select all eligible</button>
+        <span class="sel-count" id="selCount">0 selected</span>
+      </div>
+      <div id="workerGrid"><div class="empty-state">Select a source project first.</div></div>
+    </div>
+
+    <!-- STEP 3: Target project -->
+    <div class="step-card step-disabled" id="step3Card">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">Select Target Project</div>
+          <div class="step-sub">Which project should receive these workers?</div>
+        </div>
+      </div>
+      <div class="proj-grid" id="targetGrid">
+        <div class="empty-state">Select workers first.</div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Confirm -->
+    <div class="step-card step-disabled" id="step4Card">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <div>
+          <div class="step-title">Confirm Transfer</div>
+          <div class="step-sub">Review and execute.</div>
+        </div>
+      </div>
+      <div class="summary-box" id="summaryBox">
+        <div class="summary-row"><span class="lbl">From project</span><span class="val" id="sumFrom">—</span></div>
+        <div class="summary-row"><span class="lbl">To project</span><span class="val" id="sumTo">—</span></div>
+        <div class="summary-row"><span class="lbl">Workers selected</span><span class="val ac" id="sumSelected">0</span></div>
+        <div class="summary-row"><span class="lbl">Will be skipped (hired)</span><span class="val or" id="sumSkipped">0</span></div>
+        <div class="summary-row"><span class="lbl">Will be transferred</span><span class="val ac" id="sumTransfer">0</span></div>
+      </div>
+      <button class="transfer-btn" id="transferBtn" onclick="executeTransfer()" disabled>🔀 Transfer Workers</button>
+    </div>
+
+  </div><!-- /mainFlow -->
+
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const SOURCE_PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+
+let _projects      = [];
+let _sourceId      = SOURCE_PROJECT_ID || null;
+let _targetId      = null;
+let _workers       = [];       // waiting list of source project
+let _selected      = new Set();// omang_numbers selected
+let _hiredOmangs   = new Set();// already hired in target project
+let _sourceChecked = false;
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('backBtn').href =
+    SOURCE_PROJECT_ID ? `waitinglist.html?project=${SOURCE_PROJECT_ID}` : 'waitinglist.html';
+
+  const { data, error } = await sb
+    .from('projects')
+    .select('id, project_name, month, year')
+    .order('created_at', { ascending: false });
+
+  if (error) { showToast('Failed to load projects: ' + error.message, 'error'); return; }
+  _projects = data || [];
+
+  renderSourceGrid();
+  document.getElementById('loadingScreen').style.display = 'none';
+
+  // Auto-select source if came from a project
+  if (_sourceId) {
+    await onSourceSelected(_sourceId);
+  }
+}
+
+// ── Source grid ────────────────────────────────────────────────────────────
+function renderSourceGrid() {
+  const el = document.getElementById('sourceGrid');
+  if (!_projects.length) { el.innerHTML = '<div class="empty-state">No projects found.</div>'; return; }
+
+  el.innerHTML = _projects.map(p => {
+    const period = [p.month, p.year].filter(Boolean).join(' ');
+    const sel    = p.id === _sourceId;
+    return `<div class="proj-row ${sel ? 'selected' : ''}" onclick="onSourceSelected('${p.id}')" data-sid="${p.id}">
+      <div class="proj-radio"></div>
+      <div class="proj-info">
+        <div class="proj-name">${p.project_name}</div>
+        ${period ? `<div class="proj-period">${period}</div>` : ''}
+      </div>
+      <span class="proj-count" id="sc-${p.id}">…</span>
+    </div>`;
+  }).join('');
+
+  // Load counts asynchronously
+  _projects.forEach(async p => {
+    const { count } = await sb.from('waiting_list').select('id', { count: 'exact', head: true }).eq('project_id', p.id);
+    const el = document.getElementById(`sc-${p.id}`);
+    if (el) el.textContent = `${count || 0} workers`;
+  });
+}
+
+async function onSourceSelected(id) {
+  _sourceId = id;
+  _selected.clear();
+  _targetId = null;
+  _workers  = [];
+
+  // Update source UI
+  document.querySelectorAll('.proj-row[data-sid]').forEach(r => r.classList.toggle('selected', r.dataset.sid === id));
+
+  // Unlock step 2
+  document.getElementById('step2Card').classList.remove('step-disabled');
+  document.getElementById('workerGrid').innerHTML = '<div class="empty-state">Loading…</div>';
+
+  // Load workers from source waiting list
+  const { data, error } = await sb
+    .from('waiting_list')
+    .select('*')
+    .eq('project_id', id)
+    .order('registered_date', { ascending: true });
+
+  if (error) { showToast('Error loading workers: ' + error.message, 'error'); return; }
+  _workers = data || [];
+
+  renderWorkers();
+  updateStep3();
+}
+
+// ── Workers grid ───────────────────────────────────────────────────────────
+function renderWorkers() {
+  const q  = (document.getElementById('workerSearch').value || '').toLowerCase();
+  const el = document.getElementById('workerGrid');
+
+  if (!_workers.length) {
+    el.innerHTML = '<div class="empty-state">No workers in this project\'s waiting list.</div>';
+    updateSelCount();
+    return;
+  }
+
+  const filtered = _workers.filter(w => {
+    const txt = `${w.first_name} ${w.surname} ${w.omang_number} ${w.village||''}`.toLowerCase();
+    return !q || txt.includes(q);
+  });
+
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty-state">No workers match your search.</div>';
+    updateSelCount();
+    return;
+  }
+
+  el.innerHTML = filtered.map(w => {
+    const isSkip    = _hiredOmangs.has(w.omang_number);
+    const isChecked = _selected.has(w.omang_number) && !isSkip;
+    const skipLabel = isSkip ? `<span class="hired-badge">Already hired</span>` : '';
+    return `<div class="worker-row ${isSkip ? 'skip' : ''}" onclick="${isSkip ? '' : `toggleWorker('${w.omang_number}')`}">
+      <div class="wchk ${isChecked ? 'checked' : ''}" id="chk-${w.omang_number}"></div>
+      <div class="winfo">
+        <div class="wname">${w.first_name} ${w.surname}</div>
+        <div class="wmeta">🆔 ${w.omang_number} &nbsp;·&nbsp; 📍 ${w.village||'—'} &nbsp;·&nbsp; 📅 Reg: ${w.registered_date ? new Date(w.registered_date).toLocaleDateString('en-ZA') : '—'}</div>
+      </div>
+      ${skipLabel}
+    </div>`;
+  }).join('');
+
+  updateSelCount();
+}
+
+function toggleWorker(omang) {
+  if (_selected.has(omang)) _selected.delete(omang);
+  else _selected.add(omang);
+  renderWorkers();
+  updateStep3();
+  updateStep4();
+}
+
+function selectAll() {
+  _workers.forEach(w => {
+    if (!_hiredOmangs.has(w.omang_number)) _selected.add(w.omang_number);
+  });
+  renderWorkers();
+  updateStep3();
+  updateStep4();
+}
+
+function updateSelCount() {
+  document.getElementById('selCount').textContent = `${_selected.size} selected`;
+}
+
+// ── Step 3: Target project ─────────────────────────────────────────────────
+function updateStep3() {
+  const step3 = document.getElementById('step3Card');
+  if (!_selected.size) {
+    step3.classList.add('step-disabled');
+    return;
+  }
+  step3.classList.remove('step-disabled');
+
+  const el = document.getElementById('targetGrid');
+  const others = _projects.filter(p => p.id !== _sourceId);
+
+  if (!others.length) { el.innerHTML = '<div class="empty-state">No other projects available as target.</div>'; return; }
+
+  el.innerHTML = others.map(p => {
+    const period = [p.month, p.year].filter(Boolean).join(' ');
+    const sel    = p.id === _targetId;
+    return `<div class="proj-row ${sel ? 'selected' : ''}" onclick="onTargetSelected('${p.id}')" data-tid="${p.id}">
+      <div class="proj-radio"></div>
+      <div class="proj-info">
+        <div class="proj-name">${p.project_name}</div>
+        ${period ? `<div class="proj-period">${period}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function onTargetSelected(id) {
+  _targetId = id;
+  document.querySelectorAll('.proj-row[data-tid]').forEach(r => r.classList.toggle('selected', r.dataset.tid === id));
+
+  // Load hired omangs from target project:
+  // members table (current hire) + project_archive (past hire in this project)
+  const targetProject = _projects.find(p => p.id === id);
+
+  // Get groups for this project
+  const { data: groups } = await sb.from('groups').select('id').eq('project_id', id);
+  const groupIds = (groups || []).map(g => g.id);
+
+  let memberOmangs = [];
+  if (groupIds.length) {
+    const { data: members } = await sb.from('members').select('omang_number').in('group_id', groupIds);
+    memberOmangs = (members || []).map(m => m.omang_number);
+  }
+
+  const { data: archiveRows } = await sb.from('project_archive').select('omang_number').eq('project_id', id);
+  const archiveOmangs = (archiveRows || []).map(r => r.omang_number);
+
+  _hiredOmangs = new Set([...memberOmangs, ...archiveOmangs]);
+
+  // Remove hired workers from selection
+  _hiredOmangs.forEach(o => _selected.delete(o));
+
+  renderWorkers();
+  updateStep4();
+}
+
+// ── Step 4: Summary ────────────────────────────────────────────────────────
+function updateStep4() {
+  const step4 = document.getElementById('step4Card');
+  const btn   = document.getElementById('transferBtn');
+
+  if (!_targetId || !_selected.size) {
+    step4.classList.add('step-disabled');
+    btn.disabled = true;
+    return;
+  }
+
+  step4.classList.remove('step-disabled');
+
+  const sourceProj = _projects.find(p => p.id === _sourceId);
+  const targetProj = _projects.find(p => p.id === _targetId);
+
+  const totalSelected  = _workers.filter(w => _selected.has(w.omang_number)).length;
+  const skippedCount   = _workers.filter(w => _hiredOmangs.has(w.omang_number)).length;
+  const toTransfer     = totalSelected;
+
+  document.getElementById('sumFrom').textContent     = sourceProj ? sourceProj.project_name : '—';
+  document.getElementById('sumTo').textContent       = targetProj ? targetProj.project_name : '—';
+  document.getElementById('sumSelected').textContent = totalSelected;
+  document.getElementById('sumSkipped').textContent  = skippedCount;
+  document.getElementById('sumTransfer').textContent = toTransfer;
+
+  btn.disabled = toTransfer === 0;
+}
+
+// ── Execute transfer ───────────────────────────────────────────────────────
+async function executeTransfer() {
+  const btn = document.getElementById('transferBtn');
+  btn.disabled = true;
+  btn.textContent = 'Transferring…';
+
+  // Workers to transfer (selected + not hired in target)
+  const toTransfer = _workers.filter(w =>
+    _selected.has(w.omang_number) && !_hiredOmangs.has(w.omang_number)
+  );
+
+  if (!toTransfer.length) {
+    showToast('No eligible workers to transfer.', 'error');
+    btn.disabled = false;
+    btn.textContent = '🔀 Transfer Workers';
+    return;
+  }
+
+  // Check which ones already exist in the target waiting list (avoid duplicates)
+  const { data: existingInTarget } = await sb
+    .from('waiting_list')
+    .select('omang_number')
+    .eq('project_id', _targetId)
+    .in('omang_number', toTransfer.map(w => w.omang_number));
+
+  const alreadyInTarget = new Set((existingInTarget || []).map(r => r.omang_number));
+  const fresh = toTransfer.filter(w => !alreadyInTarget.has(w.omang_number));
+
+  if (!fresh.length) {
+    showToast('All selected workers are already in the target waiting list.', 'info');
+    btn.disabled = false;
+    btn.textContent = '🔀 Transfer Workers';
+    return;
+  }
+
+  // Check which phone numbers already exist anywhere in waiting_list to avoid unique constraint violation
+  const phonesToCheck = fresh.map(w => w.cellphone_number).filter(Boolean);
+  let takenPhones = new Set();
+  if (phonesToCheck.length) {
+    const { data: phoneRows } = await sb
+      .from('waiting_list')
+      .select('cellphone_number')
+      .in('cellphone_number', phonesToCheck);
+    takenPhones = new Set((phoneRows || []).map(r => r.cellphone_number));
+  }
+
+  // Build insert rows — null out phone if it already exists elsewhere
+  const rows = fresh.map(w => ({
+    omang_number:          w.omang_number,
+    surname:               w.surname,
+    first_name:            w.first_name,
+    date_of_birth:         w.date_of_birth,
+    village:               w.village,
+    cellphone_number:      (w.cellphone_number && !takenPhones.has(w.cellphone_number)) ? w.cellphone_number : null,
+    mobile_money_provider: w.mobile_money_provider,
+    sex:                   w.sex,
+    qualification:         w.qualification,
+    notes:                 w.notes || null,
+    is_returning_worker:   w.is_returning_worker || false,
+    last_worked_date:      w.last_worked_date   || null,
+    total_days_worked:     w.total_days_worked  || 0,
+    total_employments:     w.total_employments  || 0,
+    project_id:            _targetId,
+  }));
+
+  const { error } = await sb.from('waiting_list').insert(rows);
+
+  btn.disabled    = false;
+  btn.textContent = '🔀 Transfer Workers';
+
+  if (error) {
+    showToast('Transfer failed: ' + error.message, 'error');
+    return;
+  }
+
+  // Show result
+  const targetProj = _projects.find(p => p.id === _targetId);
+  const skippedDupe = toTransfer.length - fresh.length;
+
+  document.getElementById('resultTitle').textContent = `${fresh.length} worker${fresh.length !== 1 ? 's' : ''} transferred!`;
+  document.getElementById('resultSub').innerHTML =
+    `Copied to <strong>${targetProj ? targetProj.project_name : 'target project'}</strong>'s waiting list.<br>` +
+    (skippedDupe  > 0 ? `${skippedDupe} skipped (already in target list).<br>` : '') +
+    (alreadyInTarget.size > 0 ? `${alreadyInTarget.size} skipped (already hired in target project).<br>` : '') +
+    (takenPhones.size > 0 ? `⚠️ ${takenPhones.size} phone number(s) cleared (duplicate) — update manually if needed.<br>` : '') +
+    `Original list was not modified.`;
+
+  document.getElementById('mainFlow').style.display    = 'none';
+  document.getElementById('resultScreen').classList.add('show');
+  showToast(`${fresh.length} workers transferred ✓`, 'success');
+}
+
+// ── Reset ──────────────────────────────────────────────────────────────────
+function resetTool() {
+  _sourceId    = SOURCE_PROJECT_ID || null;
+  _targetId    = null;
+  _workers     = [];
+  _selected    = new Set();
+  _hiredOmangs = new Set();
+
+  document.getElementById('mainFlow').style.display = '';
+  document.getElementById('resultScreen').classList.remove('show');
+  document.getElementById('step2Card').classList.add('step-disabled');
+  document.getElementById('step3Card').classList.add('step-disabled');
+  document.getElementById('step4Card').classList.add('step-disabled');
+  document.getElementById('workerGrid').innerHTML = '<div class="empty-state">Select a source project first.</div>';
+  document.getElementById('workerSearch').value   = '';
+
+  renderSourceGrid();
+  if (_sourceId) onSourceSelected(_sourceId);
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+init();
+</script>
+</body>
+</html>

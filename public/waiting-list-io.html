@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Waiting List Import / Export</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;
+    --orange:#fd7e14;--text:#dff0eb;--muted:#6b8c84;
+    --green:#2c5530;--green2:#34623a;--green3:#3d6f44;--sup:#d4a574;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
+
+  .header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 60%,var(--green3) 100%);padding:1.6rem 1.5rem 1.4rem;display:flex;align-items:center;gap:1rem;}
+  .logo-circle{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--green);flex-shrink:0;}
+  .header-text{flex:1;min-width:0;}
+  .header-text h1{font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.35rem);font-weight:700;color:#fff;line-height:1.2;}
+  .header-text p{font-size:.67rem;color:rgba(255,255,255,.8);margin-top:.2rem;letter-spacing:.04em;}
+  .back-pill{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.42rem 1rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;flex-shrink:0;}
+  .back-pill:hover{background:rgba(255,255,255,.28);}
+
+  .scroll-body{padding:1.5rem;max-width:680px;margin:0 auto;}
+
+  .section-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:1.4rem;overflow:hidden;}
+  .section-card-header{padding:1rem 1.3rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.7rem;}
+  .section-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+  .icon-export{background:rgba(0,201,138,.1);border:1px solid rgba(0,201,138,.25);}
+  .icon-import{background:rgba(79,192,212,.1);border:1px solid rgba(79,192,212,.25);}
+  .icon-danger{background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.2);}
+  .section-title{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;}
+  .section-sub{font-size:.63rem;color:var(--muted);margin-top:.15rem;}
+  .section-body{padding:1.2rem 1.3rem;}
+
+  .action-btn{width:100%;padding:.8rem 1rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .2s;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:.5rem;border:none;}
+  .btn-export{background:rgba(0,201,138,.12);border:1px solid rgba(0,201,138,.3);color:var(--accent);}
+  .btn-export:hover{background:rgba(0,201,138,.22);}
+  .btn-import{background:rgba(79,192,212,.1);border:1px solid rgba(79,192,212,.3);color:var(--blue);}
+  .btn-import:hover{background:rgba(79,192,212,.2);}
+  .btn-danger{background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.25);color:var(--red);}
+  .btn-danger:hover{background:rgba(240,96,96,.16);}
+  .action-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .drop-zone{border:2px dashed var(--border);border-radius:10px;padding:2rem 1rem;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:1rem;position:relative;}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--blue);background:rgba(79,192,212,.04);}
+  .drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .dz-icon{font-size:2rem;margin-bottom:.5rem;}
+  .dz-text{font-size:.72rem;color:var(--muted);line-height:1.8;}
+  .dz-text b{color:var(--blue);}
+  .dz-filename{font-size:.68rem;color:var(--accent);margin-top:.4rem;font-style:italic;}
+
+  .preview-wrap{margin-top:1rem;overflow-x:auto;}
+  .preview-label{font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+  .preview-table{width:100%;border-collapse:collapse;font-size:.62rem;}
+  .preview-table th{background:var(--s2);color:var(--muted);padding:.4rem .6rem;text-align:left;border-bottom:1px solid var(--border);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
+  .preview-table td{padding:.4rem .6rem;border-bottom:1px solid rgba(30,45,40,.5);color:var(--text);white-space:nowrap;}
+  .preview-table tr:last-child td{border-bottom:none;}
+  .preview-count{font-size:.65rem;color:var(--muted);margin-top:.5rem;text-align:right;font-style:italic;}
+
+  .import-result{margin-top:1rem;padding:.75rem 1rem;border-radius:8px;font-size:.7rem;line-height:1.8;display:none;}
+  .import-result.ok{background:rgba(0,201,138,.07);border:1px solid rgba(0,201,138,.2);color:var(--accent);}
+  .import-result.err{background:rgba(240,96,96,.07);border:1px solid rgba(240,96,96,.2);color:var(--red);}
+  .import-result.info{background:rgba(79,192,212,.07);border:1px solid rgba(79,192,212,.2);color:var(--blue);}
+
+  .conflict-row{margin-bottom:1rem;}
+  .conflict-label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;}
+  .conflict-chips{display:flex;gap:.4rem;flex-wrap:wrap;}
+  .cchip{padding:.28rem .75rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.6rem;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;}
+  .cchip:hover{border-color:var(--gold);color:var(--text);}
+  .cchip.active{background:rgba(232,184,75,.1);border-color:rgba(232,184,75,.4);color:var(--gold);font-weight:500;}
+
+  .warn-box{background:rgba(240,96,96,.05);border:1px solid rgba(240,96,96,.18);border-radius:8px;padding:.7rem 1rem;font-size:.65rem;color:var(--red);line-height:1.7;margin-bottom:1rem;display:flex;gap:.5rem;}
+  .warn-box .wi{flex-shrink:0;}
+
+  .mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:1.1rem;}
+  .ms-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem .8rem;text-align:center;}
+  .ms-num{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:700;color:var(--accent);}
+  .ms-lbl{font-size:.5rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:.2rem;}
+
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1.1rem;font-size:.72rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:300px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
+  .toast.info{border-color:rgba(79,192,212,.4);color:var(--blue);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:.78rem;color:var(--muted);letter-spacing:.1em;}
+
+  .divider{height:1px;background:var(--border);margin:.9rem 0;}
+  .hint-text{font-size:.63rem;color:var(--muted);line-height:1.75;margin-bottom:.9rem;}
+  .progress-bar-wrap{background:var(--border);border-radius:4px;height:6px;margin-bottom:.6rem;overflow:hidden;display:none;}
+  .progress-bar{height:100%;background:var(--accent);border-radius:4px;width:0%;transition:width .3s ease;}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading…</div>
+</div>
+
+<div class="header">
+  <div class="logo-circle">IK</div>
+  <div class="header-text">
+    <h1>Import / Export</h1>
+    <p>Waiting List Data Management</p>
+  </div>
+  <a class="back-pill" id="backBtn" href="waiting-list.html">← Waiting List</a>
+</div>
+
+<div class="scroll-body">
+
+  <!-- Live stats -->
+  <div class="mini-stats">
+    <div class="ms-card"><div class="ms-num" id="ms-total">—</div><div class="ms-lbl">Total Workers</div></div>
+    <div class="ms-card"><div class="ms-num" id="ms-returning" style="color:var(--sup)">—</div><div class="ms-lbl">Returning</div></div>
+    <div class="ms-card"><div class="ms-num" id="ms-new" style="color:var(--blue)">—</div><div class="ms-lbl">New</div></div>
+  </div>
+
+  <!-- ── EXPORT ── -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <div class="section-icon icon-export">📤</div>
+      <div>
+        <div class="section-title">Export Waiting List</div>
+        <div class="section-sub">Download all waiting list records as a .sql file</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="hint-text">Exports all waiting list records as SQL INSERT statements. The .sql file can be re-imported here or run directly on a PostgreSQL database.</div>
+      <button class="action-btn btn-export" onclick="doExport()">📥 Export as SQL</button>
+    </div>
+  </div>
+
+  <!-- ── IMPORT ── -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <div class="section-icon icon-import">📥</div>
+      <div>
+        <div class="section-title">Import Workers</div>
+        <div class="section-sub">Upload a .sql file to add workers to the list</div>
+      </div>
+    </div>
+    <div class="section-body">
+
+      <div class="hint-text">
+        Upload a <b>.sql</b> file containing INSERT statements (exported from this app or written manually).<br>
+        Required columns: <b>omang_number, surname, first_name, date_of_birth, village, sex, mobile_money_provider, qualification</b>.
+      </div>
+
+      <div class="conflict-row">
+        <div class="conflict-label">On Duplicate Omang</div>
+        <div class="conflict-chips" id="conflict-chips">
+          <div class="cchip active" data-v="skip"     onclick="setConflict(this)">Skip (keep existing)</div>
+          <div class="cchip"       data-v="overwrite" onclick="setConflict(this)">Overwrite existing</div>
+          <div class="cchip"       data-v="error"     onclick="setConflict(this)">Stop on conflict</div>
+        </div>
+      </div>
+
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".sql,.txt" onchange="handleFileSelect(this)">
+        <div class="dz-icon">📂</div>
+        <div class="dz-text">Drag & drop a file here, or <b>click to browse</b><br>.sql</div>
+        <div class="dz-filename" id="dzFilename"></div>
+      </div>
+
+      <div class="progress-bar-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <div id="previewSection" style="display:none">
+        <div class="preview-wrap">
+          <div class="preview-label">Preview (first 5 rows)</div>
+          <div style="overflow-x:auto">
+            <table class="preview-table" id="previewTable"></table>
+          </div>
+          <div class="preview-count" id="previewCount"></div>
+        </div>
+        <div class="divider"></div>
+        <button class="action-btn btn-import" id="importBtn" onclick="doImport()">📤 Import <span id="importCountLabel">Workers</span></button>
+      </div>
+
+      <div class="import-result" id="importResult"></div>
+    </div>
+  </div>
+
+  <!-- ── DANGER ZONE ── -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <div class="section-icon icon-danger">⚠️</div>
+      <div>
+        <div class="section-title">Danger Zone</div>
+        <div class="section-sub">Destructive operations — cannot be undone</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="warn-box">
+        <span class="wi">🔴</span>
+        <span>These actions <strong>permanently delete</strong> records from the live database. Export a backup first.</span>
+      </div>
+      <button class="action-btn btn-danger" onclick="clearWaitingList()">🗑 Clear Entire Waiting List</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+
+let _parsedRows = [];
+let _conflict   = 'skip';
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  if (PROJECT_ID) {
+    document.getElementById('backBtn').href = `waiting-list.html?project=${PROJECT_ID}`;
+  }
+  await loadStats();
+  document.getElementById('loadingScreen').style.display = 'none';
+  setupDrop();
+}
+
+async function loadStats() {
+  const { data } = await sb.from('waiting_list').select('is_returning_worker');
+  if (!data) return;
+  const total     = data.length;
+  const returning = data.filter(r => r.is_returning_worker).length;
+  document.getElementById('ms-total').textContent     = total;
+  document.getElementById('ms-returning').textContent = returning;
+  document.getElementById('ms-new').textContent       = total - returning;
+}
+
+// ── Conflict chips ─────────────────────────────────────────────────────────
+function setConflict(el) {
+  document.querySelectorAll('#conflict-chips .cchip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  _conflict = el.dataset.v;
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────────────
+async function doExport() {
+  showToast('Fetching data…', 'info');
+  const { data, error } = await sb.from('waiting_list').select('*').order('registered_date', { ascending: true });
+  if (error) { showToast('Export failed: ' + error.message, 'error'); return; }
+  if (!data || !data.length) { showToast('No records to export.', 'info'); return; }
+  const ts = new Date().toISOString().slice(0, 10);
+  download(`waiting_list_${ts}.sql`, toSQL(data), 'text/plain');
+  showToast(`Exported ${data.length} workers as .sql ✓`, 'success');
+}
+
+function toSQL(rows) {
+  if (!rows.length) return '-- No records\n';
+  const cols  = Object.keys(rows[0]).filter(c => c !== 'id');
+  const esc   = v => v == null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`;
+  const lines = rows.map(r =>
+    `INSERT INTO waiting_list (${cols.join(', ')}) VALUES (${cols.map(c => esc(r[c])).join(', ')});`
+  );
+  return `-- Waiting List Export — ${new Date().toISOString()}\n-- ${rows.length} records\n\n` + lines.join('\n');
+}
+
+function download(filename, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+}
+
+// ── DROP ZONE ──────────────────────────────────────────────────────────────
+function setupDrop() {
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+  });
+}
+
+function handleFileSelect(input) {
+  if (input.files[0]) processFile(input.files[0]);
+}
+
+function processFile(file) {
+  document.getElementById('dzFilename').textContent = `📄 ${file.name}`;
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('importResult').style.display   = 'none';
+  _parsedRows = [];
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      _parsedRows = parseSQL(e.target.result);
+      if (!_parsedRows.length) throw new Error('No valid INSERT statements found in file.');
+      showPreview(_parsedRows);
+    } catch(err) {
+      showToast('Parse error: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── SQL Parser ─────────────────────────────────────────────────────────────
+function parseSQL(text) {
+  const rows = [];
+  // Normalise: remove ON CONFLICT clauses so the regex stays simple
+  const cleaned = text.replace(/\)\s*ON CONFLICT[^;]*;/gi, ');');
+  const re = /INSERT INTO\s+(?:public\.)?waiting_list\s*\(([^)]+)\)\s*VALUES\s*\(([^;]+)\)\s*;/gi;
+  let m;
+  while ((m = re.exec(cleaned)) !== null) {
+    const cols = m[1].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+    const vals = parseSQLValues(m[2]);
+    const obj  = {};
+    cols.forEach((c, i) => { obj[c] = vals[i] === 'NULL' ? null : vals[i]; });
+    rows.push(normalise(obj));
+  }
+  return rows;
+}
+
+function parseSQLValues(str) {
+  const vals = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch === "'" && str[i + 1] === "'") { cur += "'"; i++; }
+    else if (ch === "'") { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+    else { cur += ch; }
+  }
+  vals.push(cur.trim());
+  return vals;
+}
+
+// ── Normalise row to waiting_list schema ───────────────────────────────────
+const REQUIRED = ['omang_number', 'surname', 'first_name', 'date_of_birth', 'village'];
+
+function normalise(row) {
+  return {
+    omang_number:          (row.omang_number || row.omang || '').replace(/\s/g, ''),
+    surname:               row.surname       || row.last_name || '',
+    first_name:            row.first_name    || row.name      || '',
+    date_of_birth:         row.date_of_birth || row.dob       || '',
+    village:               row.village       || row.location  || '',
+    cellphone_number:      row.cellphone_number || row.phone  || null,
+    mobile_money_provider: row.mobile_money_provider          || 'smega',
+    sex:                   row.sex           || 'M',
+    qualification:         row.qualification || 'PSLE',
+    notes:                 row.notes         || null,
+    is_returning_worker:   row.is_returning_worker === true || row.is_returning_worker === 'true' || false,
+    last_worked_date:      row.last_worked_date  || null,
+    total_days_worked:     parseInt(row.total_days_worked)   || 0,
+    total_employments:     parseInt(row.total_employments)   || 0,
+    project_id:            row.project_id    || PROJECT_ID   || null,
+  };
+}
+
+function validateRow(row) {
+  for (const f of REQUIRED) {
+    if (!row[f]) return `Missing required field: ${f}`;
+  }
+  if (!/^\d{9}$/.test(row.omang_number)) return `Invalid Omang (must be 9 digits): ${row.omang_number}`;
+  return null;
+}
+
+// ── Preview ────────────────────────────────────────────────────────────────
+function showPreview(rows) {
+  const preview = rows.slice(0, 5);
+  const COLS    = ['omang_number', 'first_name', 'surname', 'village', 'sex', 'qualification', 'mobile_money_provider'];
+  const table   = document.getElementById('previewTable');
+  const head    = `<thead><tr>${COLS.map(c => `<th>${c}</th>`).join('')}</tr></thead>`;
+  const body    = `<tbody>${preview.map(r =>
+    `<tr>${COLS.map(c => `<td>${r[c] || '—'}</td>`).join('')}</tr>`
+  ).join('')}</tbody>`;
+  table.innerHTML = head + body;
+  document.getElementById('previewCount').textContent     = `${rows.length} row${rows.length !== 1 ? 's' : ''} found in file`;
+  document.getElementById('importCountLabel').textContent = `${rows.length} Worker${rows.length !== 1 ? 's' : ''}`;
+  document.getElementById('previewSection').style.display = '';
+}
+
+// ── IMPORT ─────────────────────────────────────────────────────────────────
+async function doImport() {
+  if (!_parsedRows.length) return;
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true; btn.textContent = 'Importing…';
+
+  const pw = document.getElementById('progressWrap');
+  const pb = document.getElementById('progressBar');
+  pw.style.display = 'block'; pb.style.width = '0%';
+
+  let inserted = 0, skipped = 0, errors = [];
+
+  // Validate all rows first
+  for (const row of _parsedRows) {
+    const err = validateRow(row);
+    if (err) errors.push(err);
+  }
+  if (errors.length && _conflict === 'error') {
+    showResult('error', `Validation errors (import stopped):\n• ${errors.join('\n• ')}`);
+    btn.disabled = false; btn.textContent = `📤 Import ${_parsedRows.length} Workers`;
+    pw.style.display = 'none';
+    return;
+  }
+
+  // Fetch existing omang numbers for conflict check
+  const { data: existing } = await sb.from('waiting_list').select('omang_number');
+  const existingSet = new Set((existing || []).map(r => r.omang_number));
+
+  const BATCH     = 20;
+  const validRows = _parsedRows.filter(r => !validateRow(r));
+
+  for (let i = 0; i < validRows.length; i += BATCH) {
+    const batch    = validRows.slice(i, i + BATCH);
+    const toInsert = [];
+
+    for (const row of batch) {
+      if (existingSet.has(row.omang_number)) {
+        if (_conflict === 'skip')      { skipped++; continue; }
+        if (_conflict === 'error')     { errors.push(`Duplicate Omang: ${row.omang_number}`); continue; }
+        if (_conflict === 'overwrite') {
+          await sb.from('waiting_list').delete().eq('omang_number', row.omang_number);
+          existingSet.delete(row.omang_number);
+        }
+      }
+      toInsert.push(row);
+    }
+
+    if (toInsert.length) {
+      const { error } = await sb.from('waiting_list').insert(toInsert);
+      if (error) {
+        errors.push(error.message);
+      } else {
+        inserted += toInsert.length;
+        toInsert.forEach(r => existingSet.add(r.omang_number));
+      }
+    }
+
+    pb.style.width = `${Math.round(((i + BATCH) / validRows.length) * 100)}%`;
+  }
+
+  pb.style.width = '100%';
+  setTimeout(() => { pw.style.display = 'none'; }, 600);
+
+  const invalid = _parsedRows.length - validRows.length;
+  let msg = `✓ Inserted: ${inserted}`;
+  if (skipped)       msg += `\n⟳ Skipped (duplicate): ${skipped}`;
+  if (invalid)       msg += `\n⚠ Invalid rows (skipped): ${invalid}`;
+  if (errors.length) msg += `\n✗ Errors:\n• ${errors.slice(0, 5).join('\n• ')}`;
+
+  const type = errors.length ? 'err' : skipped ? 'info' : 'ok';
+  showResult(type, msg);
+  showToast(`Import done — ${inserted} inserted`, inserted ? 'success' : 'info');
+  await loadStats();
+
+  btn.disabled = false;
+  btn.textContent = `📤 Import ${_parsedRows.length} Workers`;
+  _parsedRows = [];
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('dzFilename').textContent = '';
+  document.getElementById('fileInput').value = '';
+}
+
+function showResult(type, msg) {
+  const el = document.getElementById('importResult');
+  el.style.display    = 'block';
+  el.className        = `import-result ${type}`;
+  el.style.whiteSpace = 'pre-wrap';
+  el.textContent      = msg;
+}
+
+// ── Clear waiting list ─────────────────────────────────────────────────────
+async function clearWaitingList() {
+  const { data: countData } = await sb.from('waiting_list').select('id');
+  const count = (countData || []).length;
+  if (!count) { showToast('Waiting list is already empty.', 'info'); return; }
+
+  const confirm1 = confirm(`⚠ This will permanently delete ALL ${count} workers from the waiting list.\n\nAre you absolutely sure?`);
+  if (!confirm1) return;
+  const confirm2 = prompt(`Type DELETE to confirm removing ${count} workers:`);
+  if (confirm2 !== 'DELETE') { showToast('Cancelled.', 'info'); return; }
+
+  const { error } = await sb.from('waiting_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  showToast(`${count} workers removed from waiting list.`, 'success');
+  await loadStats();
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+init();
+</script>
+</body>
+</html>
