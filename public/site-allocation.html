@@ -6,8 +6,6 @@
 <title>Ikageng — Site Allocation</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
@@ -47,7 +45,41 @@
   .add-site-btn{background:rgba(0,201,138,.08);border:1px solid rgba(0,201,138,.3);color:var(--accent);font-family:'DM Mono',monospace;font-size:.68rem;padding:.35rem .9rem;border-radius:6px;cursor:pointer;transition:all .15s;}
   .add-site-btn:hover{background:rgba(0,201,138,.18);}
 
-  /* Village filter bar */
+  /* ── VILLAGE QUOTA PANEL ── */
+  .vq-panel{background:var(--surface);border:1px solid rgba(232,184,75,.25);border-radius:12px;margin-bottom:1.4rem;overflow:hidden;}
+  .vq-panel-header{background:rgba(232,184,75,.06);padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+  .vq-panel-title{display:flex;align-items:center;gap:.5rem;}
+  .vq-panel-title span{font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);}
+  .vq-panel-arrow{font-size:.7rem;color:var(--muted);transition:transform .2s;}
+  .vq-panel-arrow.open{transform:rotate(180deg);}
+  .vq-panel-body{display:none;padding:1rem 1.1rem 1.1rem;}
+  .vq-panel-body.open{display:block;}
+  .vq-info{font-size:.63rem;color:var(--muted);line-height:1.7;margin-bottom:.9rem;padding:.6rem .8rem;background:rgba(232,184,75,.04);border-radius:7px;border:1px solid rgba(232,184,75,.12);}
+  .vq-info b{color:var(--gold);}
+  .vq-table{width:100%;border-collapse:collapse;margin-bottom:.8rem;}
+  .vq-table th{font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:.4rem .6rem;border-bottom:1px solid var(--border);}
+  .vq-table td{padding:.5rem .6rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.72rem;vertical-align:middle;}
+  .vq-table tr:last-child td{border-bottom:none;}
+  .vq-village-name{color:var(--text);font-weight:500;}
+  .vq-quota-input{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.72rem;padding:.3rem .6rem;border-radius:5px;width:80px;text-align:center;outline:none;transition:border-color .15s;}
+  .vq-quota-input:focus{border-color:var(--gold);}
+  .vq-assigned-count{font-family:'Fraunces',serif;font-size:.85rem;font-weight:700;}
+  .vq-progress{height:5px;background:var(--s2);border-radius:3px;overflow:hidden;width:80px;}
+  .vq-progress-fill{height:100%;border-radius:3px;transition:width .3s ease;}
+  .vq-status-badge{font-size:.52rem;padding:.12rem .5rem;border-radius:8px;white-space:nowrap;}
+  .vq-actions{display:flex;gap:.5rem;flex-wrap:wrap;}
+  .vq-btn{font-family:'DM Mono',monospace;font-size:.63rem;padding:.3rem .7rem;border-radius:5px;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+  .vq-btn-auto{background:rgba(79,192,212,.1);border:1px solid rgba(79,192,212,.3);color:var(--blue);}
+  .vq-btn-auto:hover{background:rgba(79,192,212,.2);}
+  .vq-btn-manual{background:rgba(0,201,138,.08);border:1px solid rgba(0,201,138,.25);color:var(--accent);}
+  .vq-btn-manual:hover{background:rgba(0,201,138,.18);}
+  .vq-save-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-top:.5rem;}
+  .vq-total-info{font-size:.62rem;color:var(--muted);}
+  .vq-total-info b{color:var(--text);}
+  .vq-save-btn{background:var(--gold);border:none;color:#1a1000;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;padding:.4rem 1.1rem;border-radius:6px;cursor:pointer;transition:opacity .15s;}
+  .vq-save-btn:hover{opacity:.85;}
+
+  /* Village filter */
   .village-filter-bar{display:flex;align-items:center;gap:.5rem;margin-bottom:1.1rem;flex-wrap:wrap;}
   .vf-label{font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
   .vf-chips{display:flex;gap:.4rem;flex-wrap:wrap;flex:1;}
@@ -59,15 +91,15 @@
 
   /* Action bar */
   .action-bar{display:flex;gap:.6rem;margin-bottom:1.2rem;flex-wrap:wrap;}
-  .action-btn{display:inline-flex;align-items:center;gap:.4rem;font-family:'DM Mono',monospace;font-size:.72rem;padding:.5rem 1.1rem;border-radius:8px;cursor:pointer;border:none;font-weight:500;transition:all .18s;white-space:nowrap;}
+  .action-btn{display:inline-flex;align-items:center;gap:.4rem;font-family:'DM Mono',monospace;font-size:.72rem;padding:.5rem 1.1rem;border-radius:8px;cursor:pointer;border:none;font-weight:500;transition:all .18s;white-space:nowrap;text-decoration:none;}
   .action-btn:disabled{opacity:.45;cursor:not-allowed;}
   .btn-auto{background:linear-gradient(135deg,rgba(79,192,212,.15),rgba(79,192,212,.08));border:1px solid rgba(79,192,212,.4);color:var(--blue);}
   .btn-auto:hover:not(:disabled){background:rgba(79,192,212,.2);border-color:var(--blue);}
   .btn-auto:not(:disabled){animation:pulse-blue 2.5s ease-in-out infinite;}
   @keyframes pulse-blue{0%,100%{box-shadow:0 0 0 0 rgba(79,192,212,.0);}50%{box-shadow:0 0 0 4px rgba(79,192,212,.15);}}
-  .btn-pdf{background:linear-gradient(135deg,rgba(232,184,75,.12),rgba(232,184,75,.06));border:1px solid rgba(232,184,75,.4);color:var(--gold);}
-  .btn-pdf:hover:not(:disabled){background:rgba(232,184,75,.2);border-color:var(--gold);}
-  .btn-pdf-site{background:transparent;border:1px solid rgba(232,184,75,.25);color:var(--gold);font-family:'DM Mono',monospace;font-size:.6rem;padding:.28rem .7rem;border-radius:5px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .btn-export{background:linear-gradient(135deg,rgba(232,184,75,.12),rgba(232,184,75,.06));border:1px solid rgba(232,184,75,.4);color:var(--gold);}
+  .btn-export:hover{background:rgba(232,184,75,.2);border-color:var(--gold);}
+  .btn-pdf-site{background:transparent;border:1px solid rgba(232,184,75,.25);color:var(--gold);font-family:'DM Mono',monospace;font-size:.6rem;padding:.28rem .7rem;border-radius:5px;cursor:pointer;transition:all .15s;white-space:nowrap;text-decoration:none;}
   .btn-pdf-site:hover{background:rgba(232,184,75,.1);}
 
   /* Site card */
@@ -92,7 +124,7 @@
   .icon-btn:hover{border-color:var(--accent);color:var(--accent);}
   .icon-btn.del:hover{border-color:var(--red);color:var(--red);}
 
-  /* Progress bar */
+  /* Progress */
   .progress-wrap{padding:0 1.1rem .85rem;}
   .progress-track{height:6px;background:var(--s2);border-radius:3px;overflow:hidden;}
   .progress-fill{height:100%;border-radius:3px;transition:width .4s ease;}
@@ -101,7 +133,7 @@
   .fill-full{background:var(--red);}
   .progress-label{display:flex;justify-content:space-between;font-size:.58rem;color:var(--muted);margin-top:.35rem;}
 
-  /* Assigned workers in site */
+  /* Workers list */
   .site-workers{border-top:1px solid var(--border);}
   .site-workers-header{padding:.6rem 1.1rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
   .site-workers-header span{font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
@@ -126,93 +158,7 @@
   .assign-btn:hover{background:rgba(79,192,212,.12);}
   .auto-assign-site-btn{width:100%;margin-top:.4rem;padding:.48rem;background:rgba(232,184,75,.06);border:1px dashed rgba(232,184,75,.35);border-radius:7px;color:var(--gold);font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer;transition:all .15s;}
   .auto-assign-site-btn:hover{background:rgba(232,184,75,.12);}
-
-  /* Full notice */
   .full-notice{margin:.4rem 1.1rem .8rem;padding:.5rem .8rem;background:rgba(240,96,96,.07);border:1px solid rgba(240,96,96,.2);border-radius:7px;font-size:.63rem;color:var(--red);text-align:center;}
-
-  /* Loading */
-  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100;}
-  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  .loading-text{font-size:.78rem;color:var(--muted);letter-spacing:.1em;}
-
-  /* Toast */
-  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1.1rem;font-size:.72rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:300px;line-height:1.5;}
-  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
-  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
-  .toast.info{border-color:rgba(79,192,212,.4);color:var(--blue);}
-  .toast.warn{border-color:rgba(253,126,20,.4);color:var(--orange);}
-  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-
-  /* Modal */
-  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;align-items:flex-end;justify-content:center;}
-  .modal-overlay.open{display:flex;}
-  .modal-sheet{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:92vh;display:flex;flex-direction:column;animation:sheetUp .25s ease;}
-  @keyframes sheetUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
-  .modal-header{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-  .modal-header h2{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;}
-  .modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:.2rem .5rem;border-radius:4px;}
-  .modal-close:hover{color:var(--red);}
-  .modal-body{flex:1;overflow-y:auto;padding:1.3rem 1.5rem;}
-  .modal-footer-btns{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.75rem;flex-shrink:0;}
-  .modal-footer-btns button{flex:1;padding:.65rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.75rem;cursor:pointer;font-weight:500;}
-  .btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);}
-  .btn-cancel:hover{border-color:var(--accent);color:var(--accent);}
-  .btn-save{background:var(--accent);border:none;color:#001a10;}
-  .btn-save:hover{opacity:.88;}
-  .btn-save:disabled{opacity:.45;cursor:not-allowed;}
-  .form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem;}
-  .form-group label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
-  .form-group input,.form-group select{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.6rem .85rem;border-radius:7px;outline:none;transition:border-color .15s;width:100%;}
-  .form-group input:focus,.form-group select:focus{border-color:var(--accent);}
-  .form-group input::placeholder{color:var(--muted);}
-  .form-group select option{background:var(--s2);color:var(--text);}
-  .form-err{font-size:.68rem;color:var(--red);margin-bottom:.6rem;min-height:1rem;}
-
-  /* Assign worker modal */
-  .source-tabs{display:flex;gap:.5rem;margin-bottom:1rem;}
-  .stab{flex:1;padding:.5rem;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer;text-align:center;transition:all .15s;}
-  .stab.active{background:var(--green);border-color:var(--accent);color:var(--accent);}
-  .worker-pick-list{max-height:340px;overflow-y:auto;}
-  .worker-pick-item{display:flex;align-items:flex-start;gap:.7rem;padding:.65rem .8rem;border-radius:8px;border:1px solid var(--border);background:var(--s2);margin-bottom:.5rem;cursor:pointer;transition:all .15s;}
-  .worker-pick-item:hover{border-color:var(--accent);background:rgba(0,201,138,.05);}
-  .worker-pick-item.selected{border-color:var(--accent);background:rgba(0,201,138,.1);}
-  .worker-pick-item.elder-item{border-color:rgba(255,159,67,.25);}
-  .pick-check{width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0;transition:all .15s;margin-top:.1rem;}
-  .worker-pick-item.selected .pick-check{background:var(--accent);border-color:var(--accent);color:#001a10;}
-  .pick-info{flex:1;min-width:0;}
-  .pick-name{font-size:.78rem;color:var(--text);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
-  .pick-meta{font-size:.57rem;color:var(--muted);margin-top:.15rem;line-height:1.7;}
-  .pick-empty{font-size:.72rem;color:var(--muted);text-align:center;padding:2rem;font-style:italic;}
-  .slots-warning{font-size:.65rem;color:var(--orange);text-align:center;margin-bottom:.7rem;}
-
-  /* Auto-assign modal */
-  .auto-info-box{background:rgba(79,192,212,.05);border:1px solid rgba(79,192,212,.25);border-radius:8px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.72rem;color:var(--blue);line-height:1.7;}
-  .auto-info-box b{color:var(--text);}
-  .auto-site-list{max-height:300px;overflow-y:auto;}
-  .auto-site-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;border-radius:7px;border:1px solid var(--border);background:var(--s2);margin-bottom:.4rem;font-size:.72rem;}
-  .auto-site-row-name{color:var(--text);font-weight:500;}
-  .auto-site-row-slots{color:var(--muted);font-size:.62rem;}
-  .auto-site-row-badge{font-size:.58rem;padding:.1rem .5rem;border-radius:8px;background:rgba(0,201,138,.1);color:var(--accent);border:1px solid rgba(0,201,138,.2);}
-
-  /* PDF export modal */
-  .pdf-scope-group{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;}
-  .pdf-scope-opt{display:flex;align-items:flex-start;gap:.7rem;padding:.65rem .85rem;border-radius:8px;border:1px solid var(--border);background:var(--s2);cursor:pointer;transition:all .15s;}
-  .pdf-scope-opt:hover{border-color:var(--gold);}
-  .pdf-scope-opt.selected{border-color:var(--gold);background:rgba(232,184,75,.06);}
-  .pdf-scope-radio{width:16px;height:16px;border-radius:50%;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.15rem;}
-  .pdf-scope-opt.selected .pdf-scope-radio{border-color:var(--gold);}
-  .pdf-scope-radio-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);display:none;}
-  .pdf-scope-opt.selected .pdf-scope-radio-dot{display:block;}
-  .pdf-scope-label{flex:1;}
-  .pdf-scope-title{font-size:.78rem;color:var(--text);}
-  .pdf-scope-sub{font-size:.6rem;color:var(--muted);margin-top:.1rem;}
-  .pdf-site-select{margin-top:.7rem;display:none;}
-  .pdf-village-select{margin-top:.7rem;display:none;}
-
-  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;}
-
-  .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.78rem;font-style:italic;}
 
   /* Quota banner */
   .quota-banner{border-radius:10px;padding:.85rem 1.1rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:.9rem;}
@@ -254,10 +200,90 @@
   .wsr-site-src{font-size:.55rem;color:var(--muted);margin-top:.1rem;}
   .wsr-not-found{font-size:.72rem;color:var(--muted);font-style:italic;padding:.3rem 0;}
 
-  /* Legend */
+  /* Elder legend */
   .elder-legend{display:inline-flex;align-items:center;gap:.35rem;font-size:.58rem;color:var(--elder);background:rgba(255,159,67,.07);border:1px solid rgba(255,159,67,.2);border-radius:8px;padding:.25rem .6rem;margin-bottom:.9rem;}
 
-  @media(max-width:400px){.stats{grid-template-columns:repeat(2,1fr);}.form-row{grid-template-columns:1fr;}.action-bar{flex-direction:column;}}
+  /* Loading */
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:.78rem;color:var(--muted);letter-spacing:.1em;}
+
+  /* Toast */
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1.1rem;font-size:.72rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:300px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
+  .toast.info{border-color:rgba(79,192,212,.4);color:var(--blue);}
+  .toast.warn{border-color:rgba(253,126,20,.4);color:var(--orange);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Modal */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;align-items:flex-end;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal-sheet{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:92vh;display:flex;flex-direction:column;animation:sheetUp .25s ease;}
+  @keyframes sheetUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+  .modal-header{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .modal-header h2{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:.2rem .5rem;border-radius:4px;}
+  .modal-close:hover{color:var(--red);}
+  .modal-body{flex:1;overflow-y:auto;padding:1.3rem 1.5rem;}
+  .modal-footer-btns{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.75rem;flex-shrink:0;}
+  .modal-footer-btns button{flex:1;padding:.65rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.75rem;cursor:pointer;font-weight:500;}
+  .btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);}
+  .btn-cancel:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-save{background:var(--accent);border:none;color:#001a10;}
+  .btn-save:hover{opacity:.88;}
+  .btn-save:disabled{opacity:.45;cursor:not-allowed;}
+  .form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem;}
+  .form-group label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .form-group input,.form-group select{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.6rem .85rem;border-radius:7px;outline:none;transition:border-color .15s;width:100%;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--accent);}
+  .form-group input::placeholder{color:var(--muted);}
+  .form-group select option{background:var(--s2);color:var(--text);}
+  .form-err{font-size:.68rem;color:var(--red);margin-bottom:.6rem;min-height:1rem;}
+
+  /* Assign tabs */
+  .source-tabs{display:flex;gap:.5rem;margin-bottom:1rem;}
+  .stab{flex:1;padding:.5rem;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:'DM Mono',monospace;font-size:.68rem;cursor:pointer;text-align:center;transition:all .15s;}
+  .stab.active{background:var(--green);border-color:var(--accent);color:var(--accent);}
+
+  /* VQ notice in assign modal */
+  .vq-notice{background:rgba(232,184,75,.07);border:1px solid rgba(232,184,75,.25);border-radius:8px;padding:.65rem .85rem;margin-bottom:.85rem;font-size:.68rem;color:var(--gold);line-height:1.7;}
+  .vq-notice b{color:var(--text);}
+
+  /* Village filter in assign modal */
+  .assign-village-filter{margin-bottom:.85rem;}
+  .assign-village-filter label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.35rem;}
+  .assign-village-chips{display:flex;gap:.4rem;flex-wrap:wrap;}
+  .avf-chip{font-family:'DM Mono',monospace;font-size:.6rem;padding:.22rem .65rem;border-radius:14px;border:1px solid var(--border);background:var(--s2);color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .avf-chip:hover{border-color:var(--accent);color:var(--accent);}
+  .avf-chip.active{background:rgba(0,201,138,.12);border-color:var(--accent);color:var(--accent);}
+
+  .worker-pick-list{max-height:300px;overflow-y:auto;}
+  .worker-pick-item{display:flex;align-items:flex-start;gap:.7rem;padding:.65rem .8rem;border-radius:8px;border:1px solid var(--border);background:var(--s2);margin-bottom:.5rem;cursor:pointer;transition:all .15s;}
+  .worker-pick-item:hover{border-color:var(--accent);background:rgba(0,201,138,.05);}
+  .worker-pick-item.selected{border-color:var(--accent);background:rgba(0,201,138,.1);}
+  .worker-pick-item.elder-item{border-color:rgba(255,159,67,.25);}
+  .pick-check{width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0;transition:all .15s;margin-top:.1rem;}
+  .worker-pick-item.selected .pick-check{background:var(--accent);border-color:var(--accent);color:#001a10;}
+  .pick-info{flex:1;min-width:0;}
+  .pick-name{font-size:.78rem;color:var(--text);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+  .pick-meta{font-size:.57rem;color:var(--muted);margin-top:.15rem;line-height:1.7;}
+  .pick-empty{font-size:.72rem;color:var(--muted);text-align:center;padding:2rem;font-style:italic;}
+  .slots-warning{font-size:.65rem;color:var(--orange);text-align:center;margin-bottom:.7rem;}
+
+  /* Auto-assign modal */
+  .auto-info-box{background:rgba(79,192,212,.05);border:1px solid rgba(79,192,212,.25);border-radius:8px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.72rem;color:var(--blue);line-height:1.7;}
+  .auto-info-box b{color:var(--text);}
+  .auto-site-list{max-height:300px;overflow-y:auto;}
+  .auto-site-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;border-radius:7px;border:1px solid var(--border);background:var(--s2);margin-bottom:.4rem;font-size:.72rem;}
+  .auto-site-row-name{color:var(--text);font-weight:500;}
+  .auto-site-row-slots{color:var(--muted);font-size:.62rem;}
+  .auto-site-row-badge{font-size:.58rem;padding:.1rem .5rem;border-radius:8px;background:rgba(0,201,138,.1);color:var(--accent);border:1px solid rgba(0,201,138,.2);}
+
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.78rem;font-style:italic;}
+
+  @media(max-width:400px){.stats{grid-template-columns:repeat(2,1fr);}.action-bar{flex-direction:column;}}
 </style>
 </head>
 <body>
@@ -289,7 +315,6 @@
     <div class="stat-card or"><div class="stat-num" id="stat-full">—</div><div class="stat-lbl">Full Sites</div></div>
   </div>
 
-  <!-- Quota banner -->
   <div class="quota-banner none" id="quotaBanner">
     <div class="qb-left">
       <div class="qb-title">Global Quota</div>
@@ -302,36 +327,54 @@
     </div>
   </div>
 
+  <!-- Village Quota Panel -->
+  <div class="vq-panel" id="villageQuotaPanel" style="display:none">
+    <div class="vq-panel-header" onclick="toggleVqPanel()">
+      <div class="vq-panel-title">🏘️ <span>Village Quota Split</span></div>
+      <span class="vq-panel-arrow" id="vqArrow">▼</span>
+    </div>
+    <div class="vq-panel-body" id="vqBody">
+      <div class="vq-info">
+        Set how many workers to assign per village. Use <b>⚡ Auto</b> to fill up to the village quota automatically,
+        or <b>✋ Manual</b> to pick workers from a village yourself.
+        Villages with <b>0</b> quota = no limit enforced.
+      </div>
+      <div id="vqTableWrap"></div>
+      <div class="vq-save-row">
+        <div class="vq-total-info" id="vqTotalInfo"></div>
+        <button class="vq-save-btn" onclick="saveVillageQuotas()">💾 Save Village Quotas</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Worker search -->
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input type="text" id="workerSearch" placeholder="Search worker by name or Omang to find their site…" oninput="searchWorker(this.value)">
+    <input type="text" id="workerSearch" placeholder="Search worker by name or Omang…" oninput="searchWorker(this.value)">
   </div>
   <div id="workerSearchResult" style="display:none"></div>
 
   <!-- Action bar -->
   <div class="action-bar">
-    <button class="action-btn btn-auto" id="autoAssignAllBtn" onclick="openAutoAssignModal()" title="Auto-fill all sites from waiting list">
+    <button class="action-btn btn-auto" id="autoAssignAllBtn" onclick="openAutoAssignModal()">
       ⚡ Auto-Assign All Sites
     </button>
-    <button class="action-btn btn-pdf" id="exportAllPdfBtn" onclick="openPdfModal()">
+    <a class="action-btn btn-export" id="exportBtn" href="#">
       📄 Export PDF
-    </button>
+    </a>
   </div>
 
-  <!-- Elder legend -->
   <div class="elder-legend">🔴 Age 65+ indicator shown on senior workers</div>
 
-  <!-- Village filter bar -->
   <div id="villageFilterBar" class="village-filter-bar" style="display:none">
-    <span class="vf-label">Village:</span>
+    <span class="vf-label">Filter:</span>
     <div class="vf-chips" id="vfChips"></div>
   </div>
 
   <div class="section-header">
     <span class="section-label">Work Sites</span>
     <div style="display:flex;gap:.5rem;">
-      <a id="quotaBtn" href="quota.html" style="background:rgba(232,184,75,.08);border:1px solid rgba(232,184,75,.3);color:var(--gold);font-family:'DM Mono',monospace;font-size:.68rem;padding:.35rem .9rem;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;transition:all .15s;">🎯 Quota</a>
+      <a id="quotaBtn" href="quota.html" style="background:rgba(232,184,75,.08);border:1px solid rgba(232,184,75,.3);color:var(--gold);font-family:'DM Mono',monospace;font-size:.68rem;padding:.35rem .9rem;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;">🎯 Quota</a>
       <button class="add-site-btn" onclick="openAddSiteModal()">+ Add Site</button>
     </div>
   </div>
@@ -376,6 +419,11 @@
         <button class="stab active" id="stab-waiting" onclick="switchSource('waiting_list')">⏳ Waiting List</button>
         <button class="stab" id="stab-special" onclick="switchSource('special_workers')">⭐ Special Workers</button>
       </div>
+      <div class="vq-notice" id="vqAssignNotice" style="display:none"></div>
+      <div class="assign-village-filter" id="assignVillageFilter" style="display:none">
+        <label>Filter by Village</label>
+        <div class="assign-village-chips" id="assignVillageChips"></div>
+      </div>
       <div class="slots-warning" id="slotsWarning" style="display:none"></div>
       <div class="worker-pick-list" id="workerPickList"></div>
     </div>
@@ -413,75 +461,17 @@
         <label>Choose Site</label>
         <select id="auto-site-id"></select>
       </div>
+      <div class="form-group" id="auto-village-wrap" style="display:none">
+        <label>Limit to Village (optional)</label>
+        <select id="auto-village-filter">
+          <option value="">— All villages —</option>
+        </select>
+      </div>
       <div class="auto-site-list" id="autoSitePreview"></div>
     </div>
     <div class="modal-footer-btns">
       <button class="btn-cancel" onclick="closeAutoAssignModal()">Cancel</button>
       <button class="btn-save" id="autoAssignRunBtn" onclick="runAutoAssign()">⚡ Auto-Assign Now</button>
-    </div>
-  </div>
-</div>
-
-<!-- PDF Export Modal -->
-<div class="modal-overlay" id="pdfModal">
-  <div class="modal-sheet">
-    <div class="modal-header">
-      <h2>📄 Export Assigned Workers PDF</h2>
-      <button class="modal-close" onclick="closePdfModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Scope</label>
-        <div class="pdf-scope-group" id="pdfScopeGroup">
-          <div class="pdf-scope-opt selected" data-scope="all" onclick="selectPdfScope('all')">
-            <div class="pdf-scope-radio"><div class="pdf-scope-radio-dot"></div></div>
-            <div class="pdf-scope-label">
-              <div class="pdf-scope-title">All Sites — All Villages</div>
-              <div class="pdf-scope-sub">Export every assigned worker across all sites and villages</div>
-            </div>
-          </div>
-          <div class="pdf-scope-opt" data-scope="site" onclick="selectPdfScope('site')">
-            <div class="pdf-scope-radio"><div class="pdf-scope-radio-dot"></div></div>
-            <div class="pdf-scope-label">
-              <div class="pdf-scope-title">Specific Site</div>
-              <div class="pdf-scope-sub">Export workers from one site only</div>
-            </div>
-          </div>
-          <div class="pdf-scope-opt" data-scope="village" onclick="selectPdfScope('village')">
-            <div class="pdf-scope-radio"><div class="pdf-scope-radio-dot"></div></div>
-            <div class="pdf-scope-label">
-              <div class="pdf-scope-title">Specific Village</div>
-              <div class="pdf-scope-sub">Export workers from a selected village across all sites</div>
-            </div>
-          </div>
-        </div>
-        <div class="pdf-site-select" id="pdfSiteSelect">
-          <select id="pdf-site-id" style="background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.6rem .85rem;border-radius:7px;outline:none;width:100%;"></select>
-        </div>
-        <div class="pdf-village-select" id="pdfVillageSelect">
-          <select id="pdf-village-id" style="background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.6rem .85rem;border-radius:7px;outline:none;width:100%;"></select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Columns to Include</label>
-        <div style="display:flex;flex-wrap:wrap;gap:.5rem;" id="pdfColsGroup">
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-no" checked disabled> No.</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-name" checked disabled> Full Name</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-omang" checked> Omang</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-dob" checked> Date of Birth</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-village" checked> Village</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-site" checked> Site</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-source" checked> Source</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-last-worked"> Last Worked</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-employments"> Total Employments</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-date" checked> Assigned Date</label>
-          <label style="display:flex;align-items:center;gap:.3rem;font-size:.7rem;cursor:pointer;"><input type="checkbox" id="col-sig"> Signature Box</label>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer-btns">
-      <button class="btn-cancel" onclick="closePdfModal()">Cancel</button>
-      <button class="btn-save" style="background:var(--gold);color:#1a1000;" id="pdfExportBtn" onclick="exportPdf()">📥 Download PDF</button>
     </div>
   </div>
 </div>
@@ -494,30 +484,47 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
 
 let _sites = [];
-let _assignments = [];      // enriched with village, dob, last_worked_date, total_employments
-let _allAssignments = [];   // all projects (for quota)
+let _assignments = [];
+let _allAssignments = [];
 let _quota = 0;
 let _editSiteId = null;
 let _assignSiteId = null;
 let _assignSource = 'waiting_list';
 let _selectedWorkers = new Set();
 let _availableWorkers = [];
+let _filteredWorkers = [];
+let _assignVillageFilter = 'all';
 let _projectName = null;
-let _pdfScope = 'all';
-let _activeVillage = 'all'; // 'all' or a village string
+let _activeVillage = 'all';
+let _waitingListVillages = [];
+let _villageQuotas = {};
+
+// ── Village Quota Storage ──────────────────────────────────────────────────
+function vqKey() { return `ikageng_vq_${PROJECT_ID || 'global'}`; }
+
+function loadVillageQuotasFromStorage() {
+  try { _villageQuotas = JSON.parse(localStorage.getItem(vqKey()) || '{}'); } catch { _villageQuotas = {}; }
+}
+
+function saveVillageQuotas() {
+  document.querySelectorAll('.vq-quota-input').forEach(inp => {
+    _villageQuotas[inp.dataset.village] = parseInt(inp.value) || 0;
+  });
+  try { localStorage.setItem(vqKey(), JSON.stringify(_villageQuotas)); } catch {}
+  showToast('Village quotas saved ✓', 'success');
+  renderVqPanel();
+  renderVillageFilter();
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function calcAge(dobStr) {
   if (!dobStr) return null;
-  // Support DD/MM/YYYY, YYYY-MM-DD, MM/DD/YYYY
   let d = null;
-  if (/^\d{4}-\d{2}-\d{2}/.test(dobStr)) {
-    d = new Date(dobStr);
-  } else if (/^\d{2}\/\d{2}\/\d{4}/.test(dobStr)) {
-    const parts = dobStr.split('/');
-    // Try DD/MM/YYYY
-    d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-    if (isNaN(d)) d = new Date(`${parts[2]}-${parts[0]}-${parts[1]}`);
+  if (/^\d{4}-\d{2}-\d{2}/.test(dobStr)) d = new Date(dobStr);
+  else if (/^\d{2}\/\d{2}\/\d{4}/.test(dobStr)) {
+    const p = dobStr.split('/');
+    d = new Date(`${p[2]}-${p[1]}-${p[0]}`);
+    if (isNaN(d)) d = new Date(`${p[2]}-${p[0]}-${p[1]}`);
   }
   if (!d || isNaN(d)) return null;
   const now = new Date();
@@ -527,13 +534,25 @@ function calcAge(dobStr) {
   return age;
 }
 
-function isElder(a) { return (a._age !== null && a._age >= 65); }
+function isElder(a) { return a._age !== null && a._age >= 65; }
 
 function fmtDate(str) {
   if (!str) return '—';
   const d = new Date(str);
   if (isNaN(d)) return str;
   return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function getAllVillages() {
+  const set = new Set();
+  _waitingListVillages.forEach(v => { if (v && v !== '—') set.add(v); });
+  _assignments.forEach(a => { if (a._village && a._village !== '—') set.add(a._village); });
+  return Array.from(set).sort();
+}
+
+function getAssignedVillages() {
+  const set = new Set(_assignments.map(a => a._village).filter(v => v && v !== '—'));
+  return Array.from(set).sort();
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -543,9 +562,15 @@ async function init() {
   document.getElementById('quotaBtn').href =
     PROJECT_ID ? `quota.html?project=${PROJECT_ID}` : 'quota.html';
 
+  // Export button links to export.html with project param
+  const exportHref = PROJECT_ID ? `export.html?project=${PROJECT_ID}` : 'export.html';
+  document.getElementById('exportBtn').href = exportHref;
+
+  loadVillageQuotasFromStorage();
   if (PROJECT_ID) await loadProjectContext();
-  await Promise.all([loadSites(), loadAssignments(), loadQuota()]);
+  await Promise.all([loadSites(), loadAssignments(), loadQuota(), loadWaitingListVillages()]);
   renderVillageFilter();
+  renderVqPanel();
   renderSites();
   renderQuotaBanner();
   document.getElementById('loadingScreen').style.display = 'none';
@@ -568,47 +593,37 @@ async function loadSites() {
 
 async function loadAssignments() {
   if (!PROJECT_ID) { _assignments = []; return; }
-
-  // Load project assignments
-  const { data, error } = await sb.from('site_assignments').select('*').eq('project_id', PROJECT_ID);
-  if (error) { showToast('Failed to load assignments: ' + error.message, 'error'); return; }
+  const { data } = await sb.from('site_assignments').select('*').eq('project_id', PROJECT_ID);
   const rawAssignments = data || [];
-
-  // Load all assignments (for quota)
   const { data: allData } = await sb.from('site_assignments').select('*');
   _allAssignments = allData || [];
 
-  // Enrich assignments with village, dob, last_worked_date, total_employments
-  // Separate by source
   const wlOmangs = rawAssignments.filter(a => a.source === 'waiting_list').map(a => a.omang_number);
   const swOmangs = rawAssignments.filter(a => a.source === 'special_workers').map(a => a.omang_number);
-
   let wlMap = {}, swMap = {};
 
   if (wlOmangs.length) {
-    const { data: wlData } = await sb.from('waiting_list')
+    const { data: wl } = await sb.from('waiting_list')
       .select('omang_number,village,date_of_birth,last_worked_date,total_employments')
-      .in('omang_number', wlOmangs)
-      .eq('project_id', PROJECT_ID);
-    (wlData || []).forEach(w => { wlMap[w.omang_number] = w; });
+      .in('omang_number', wlOmangs).eq('project_id', PROJECT_ID);
+    (wl || []).forEach(w => { wlMap[w.omang_number] = w; });
   }
   if (swOmangs.length) {
-    const { data: swData } = await sb.from('special_workers')
+    const { data: sw } = await sb.from('special_workers')
       .select('omang_number,village,date_of_birth,start_date')
       .in('omang_number', swOmangs);
-    (swData || []).forEach(w => { swMap[w.omang_number] = w; });
+    (sw || []).forEach(w => { swMap[w.omang_number] = w; });
   }
 
   _assignments = rawAssignments.map(a => {
-    const extra = a.source === 'waiting_list' ? (wlMap[a.omang_number] || {}) : (swMap[a.omang_number] || {});
-    const dob = extra.date_of_birth || null;
+    const ex = a.source === 'waiting_list' ? (wlMap[a.omang_number] || {}) : (swMap[a.omang_number] || {});
     return {
       ...a,
-      _village: extra.village || '—',
-      _dob: dob,
-      _age: calcAge(dob),
-      _last_worked_date: extra.last_worked_date || null,
-      _total_employments: extra.total_employments != null ? extra.total_employments : (extra.start_date ? 1 : null),
+      _village: ex.village || '—',
+      _dob: ex.date_of_birth || null,
+      _age: calcAge(ex.date_of_birth),
+      _last_worked_date: ex.last_worked_date || null,
+      _total_employments: ex.total_employments != null ? ex.total_employments : null,
     };
   });
 }
@@ -618,30 +633,169 @@ async function loadQuota() {
   _quota = data ? (data.total_quota || 0) : 0;
 }
 
-// ── Village Filter ─────────────────────────────────────────────────────────
-function getVillages() {
-  const v = new Set(_assignments.map(a => a._village).filter(v => v && v !== '—'));
-  return Array.from(v).sort();
+async function loadWaitingListVillages() {
+  if (!PROJECT_ID) { _waitingListVillages = []; return; }
+  const { data } = await sb.from('waiting_list').select('village').eq('project_id', PROJECT_ID);
+  const vset = new Set((data || []).map(w => w.village).filter(Boolean));
+  _waitingListVillages = Array.from(vset).sort();
 }
 
+// ── Village Quota Panel ────────────────────────────────────────────────────
+function toggleVqPanel() {
+  document.getElementById('vqBody').classList.toggle('open');
+  document.getElementById('vqArrow').classList.toggle('open');
+}
+
+function renderVqPanel() {
+  const villages = getAllVillages();
+  const panel = document.getElementById('villageQuotaPanel');
+  if (!villages.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  let totalQuotaSet = 0;
+  const rows = villages.map(v => {
+    const assigned = _assignments.filter(a => a._village === v).length;
+    const quota    = _villageQuotas[v] || 0;
+    if (quota > 0) totalQuotaSet += quota;
+    const pct     = quota > 0 ? Math.min((assigned / quota) * 100, 100) : 0;
+    const isFull  = quota > 0 && assigned >= quota;
+    const isOver  = quota > 0 && assigned > quota;
+    const fillClr = isOver ? 'var(--red)' : isFull ? 'var(--orange)' : 'var(--accent)';
+    const statusText = quota === 0
+      ? `<span class="vq-status-badge" style="background:rgba(107,140,132,.1);color:var(--muted);border:1px solid var(--border);">No limit</span>`
+      : isOver
+        ? `<span class="vq-status-badge" style="background:rgba(240,96,96,.12);color:var(--red);border:1px solid rgba(240,96,96,.25);">Over</span>`
+        : isFull
+          ? `<span class="vq-status-badge" style="background:rgba(253,126,20,.12);color:var(--orange);border:1px solid rgba(253,126,20,.25);">Full</span>`
+          : `<span class="vq-status-badge" style="background:rgba(0,201,138,.1);color:var(--accent);border:1px solid rgba(0,201,138,.2);">${quota - assigned} left</span>`;
+    const safeV = v.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `
+    <tr>
+      <td><span class="vq-village-name">📍 ${v}</span></td>
+      <td>
+        <span class="vq-assigned-count" style="color:${quota > 0 ? fillClr : 'var(--text)'}">${assigned}</span>
+        ${quota > 0 ? `<span style="font-size:.55rem;color:var(--muted)"> / ${quota}</span>` : ''}
+      </td>
+      <td><input class="vq-quota-input" type="number" min="0" placeholder="0" data-village="${v.replace(/"/g,'&quot;')}" value="${quota > 0 ? quota : ''}" oninput="onVqInput()"></td>
+      <td>${quota > 0 ? `<div class="vq-progress"><div class="vq-progress-fill" style="width:${pct}%;background:${fillClr}"></div></div>` : '<span style="font-size:.55rem;color:var(--muted)">—</span>'}</td>
+      <td>${statusText}</td>
+      <td>
+        <div class="vq-actions">
+          <button class="vq-btn vq-btn-auto" onclick="openVillageAutoAssign('${safeV}')">⚡ Auto</button>
+          <button class="vq-btn vq-btn-manual" onclick="openVillageManualAssign('${safeV}')">✋ Manual</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('vqTableWrap').innerHTML = `
+    <table class="vq-table">
+      <thead><tr><th>Village</th><th>Assigned</th><th>Quota (slots)</th><th>Progress</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  document.getElementById('vqTotalInfo').innerHTML =
+    `<b>${_assignments.length}</b> assigned total · Quotas sum: <b>${totalQuotaSet}</b>${_quota > 0 ? ` of <b>${_quota}</b> global` : ''}`;
+}
+
+function onVqInput() {
+  let sum = 0;
+  document.querySelectorAll('.vq-quota-input').forEach(inp => { sum += parseInt(inp.value) || 0; });
+  document.getElementById('vqTotalInfo').innerHTML =
+    `<b>${_assignments.length}</b> assigned total · Quotas sum: <b>${sum}</b>${_quota > 0 ? ` of <b>${_quota}</b> global` : ''}`;
+}
+
+async function openVillageManualAssign(village) {
+  if (!PROJECT_ID) { showToast('No project selected', 'error'); return; }
+  document.querySelectorAll('.vq-quota-input').forEach(inp => { _villageQuotas[inp.dataset.village] = parseInt(inp.value) || 0; });
+  const openSites = _sites.filter(s => _assignments.filter(a => a.site_id === s.id).length < s.allocated_slots);
+  if (!openSites.length) { showToast('No sites with open slots available', 'warn'); return; }
+  if (openSites.length === 1) {
+    const s = openSites[0];
+    await _openAssignModalWithVillage(s.id, s.site_name, s.allocated_slots - _assignments.filter(a => a.site_id === s.id).length, village);
+  } else {
+    const opts = openSites.map((s, i) => `${i}: ${s.site_name} (${s.allocated_slots - _assignments.filter(a => a.site_id === s.id).length} open)`).join('\n');
+    const idx = parseInt(prompt(`Select site number for ${village} workers:\n\n${opts}\n\nType the number:`));
+    if (isNaN(idx) || idx < 0 || idx >= openSites.length) return;
+    const s = openSites[idx];
+    await _openAssignModalWithVillage(s.id, s.site_name, s.allocated_slots - _assignments.filter(a => a.site_id === s.id).length, village);
+  }
+}
+
+async function _openAssignModalWithVillage(siteId, siteName, slotsLeft, village) {
+  _assignSiteId = siteId; _assignSource = 'waiting_list';
+  _selectedWorkers = new Set(); _assignVillageFilter = village;
+  document.getElementById('assignModalTitle').textContent = `Assign to: ${siteName}`;
+  document.getElementById('stab-waiting').classList.add('active');
+  document.getElementById('stab-special').classList.remove('active');
+  const warn = document.getElementById('slotsWarning');
+  warn.style.display = slotsLeft <= 3 ? 'block' : 'none';
+  if (slotsLeft <= 3) warn.textContent = `⚠ Only ${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} remaining`;
+  await fetchAvailableWorkers();
+  renderAssignVillageFilter();
+  renderVqAssignNotice(siteId);
+  renderWorkerPicker();
+  document.getElementById('assignModal').classList.add('open');
+}
+
+async function openVillageAutoAssign(village) {
+  if (!PROJECT_ID) { showToast('No project selected', 'error'); return; }
+  document.querySelectorAll('.vq-quota-input').forEach(inp => { _villageQuotas[inp.dataset.village] = parseInt(inp.value) || 0; });
+  const vq = _villageQuotas[village] || 0;
+  const alreadyAssigned = _assignments.filter(a => a._village === village).length;
+  const slotsLeft = vq > 0 ? Math.max(0, vq - alreadyAssigned) : null;
+  if (vq > 0 && slotsLeft === 0) { showToast(`${village} quota full (${alreadyAssigned}/${vq})`, 'warn'); return; }
+
+  const assignedOmangs = new Set(_assignments.map(a => a.omang_number));
+  const { data, error } = await sb.from('waiting_list').select('id,first_name,surname,omang_number,village')
+    .eq('project_id', PROJECT_ID).eq('village', village).order('registered_date', { ascending: true });
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  const available = (data || []).filter(w => !assignedOmangs.has(w.omang_number));
+  if (!available.length) { showToast(`No unassigned workers from ${village}`, 'warn'); return; }
+
+  const toAssign = vq > 0 ? available.slice(0, slotsLeft) : available;
+  const openSites = _sites.filter(s => _assignments.filter(a => a.site_id === s.id).length < s.allocated_slots);
+  if (!openSites.length) { showToast('No sites with open slots', 'warn'); return; }
+
+  const totalOpenSlots = openSites.reduce((sum, s) => sum + (s.allocated_slots - _assignments.filter(a => a.site_id === s.id).length), 0);
+  const willAssign = Math.min(toAssign.length, totalOpenSlots);
+  const quotaMsg = vq > 0 ? `Quota: ${vq}, assigned: ${alreadyAssigned}, left: ${slotsLeft}` : 'No quota — assigning all available';
+  if (!confirm(`Auto-assign ${willAssign} workers from ${village}?\n(${quotaMsg})`)) return;
+
+  const toInsert = [];
+  let idx = 0;
+  for (const site of openSites) {
+    let sl = site.allocated_slots - _assignments.filter(a => a.site_id === site.id).length;
+    while (sl > 0 && idx < toAssign.length) {
+      const w = toAssign[idx++];
+      toInsert.push({ site_id: site.id, project_id: PROJECT_ID, omang_number: w.omang_number, first_name: w.first_name, surname: w.surname, source: 'waiting_list' });
+      sl--;
+    }
+    if (idx >= toAssign.length) break;
+  }
+  if (!toInsert.length) { showToast('Nothing to assign', 'warn'); return; }
+  const { error: e } = await sb.from('site_assignments').insert(toInsert);
+  if (e) { showToast('Error: ' + e.message, 'error'); return; }
+  showToast(`✓ ${toInsert.length} workers from ${village} assigned!`, 'success');
+  await reloadAll();
+}
+
+// ── Village Filter (main page) ─────────────────────────────────────────────
 function renderVillageFilter() {
   const bar = document.getElementById('villageFilterBar');
   const chips = document.getElementById('vfChips');
-  const villages = getVillages();
-
+  const villages = getAssignedVillages();
   if (!villages.length) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
 
-  const countAll = _assignments.length;
-  let html = `<span class="vf-chip all-chip ${_activeVillage === 'all' ? 'active' : ''}" onclick="setVillageFilter('all')">All<span class="vf-count">${countAll}</span></span>`;
-
+  let html = `<span class="vf-chip all-chip ${_activeVillage === 'all' ? 'active' : ''}" onclick="setVillageFilter('all')">All<span class="vf-count">${_assignments.length}</span></span>`;
   villages.forEach(v => {
     const cnt = _assignments.filter(a => a._village === v).length;
+    const vq  = _villageQuotas[v] || 0;
     html += `<span class="vf-chip ${_activeVillage === v ? 'active' : ''}" onclick="setVillageFilter('${v.replace(/'/g,"\\'")}')">
-      ${v}<span class="vf-count">${cnt}</span>
+      ${v}<span class="vf-count">${cnt}${vq > 0 ? `/${vq}` : ''}</span>
     </span>`;
   });
-
   chips.innerHTML = html;
 }
 
@@ -666,13 +820,10 @@ function renderQuotaBanner() {
   const sublbl = document.getElementById('qbSublbl');
 
   if (_quota === 0) {
-    banner.className = 'quota-banner none';
-    numEl.className  = 'qb-num none';
-    numEl.textContent = '—';
-    sublbl.textContent = 'no quota set';
-    lblEl.textContent  = 'No quota configured — visit Quota page to set one';
-    fillEl.style.width = '0%';
-    return;
+    banner.className = 'quota-banner none'; numEl.className = 'qb-num none';
+    numEl.textContent = '—'; sublbl.textContent = 'no quota set';
+    lblEl.textContent = 'No quota configured — visit Quota page to set one';
+    fillEl.style.width = '0%'; return;
   }
 
   const total  = _allAssignments.length;
@@ -699,21 +850,15 @@ function searchWorker(query) {
 
   const matches = _allAssignments.filter(a => {
     const name = `${a.first_name} ${a.surname}`.toLowerCase();
-    const omang = a.omang_number.toLowerCase();
-    return name.includes(q) || omang.includes(q);
+    return name.includes(q) || a.omang_number.toLowerCase().includes(q);
   });
 
   if (!matches.length) {
     resultEl.style.display = 'block';
-    resultEl.innerHTML = `
-      <div class="worker-search-result">
-        <div class="wsr-header">🔍 Search Result</div>
-        <div class="wsr-not-found">No worker found matching "<strong style="color:var(--text)">${query}</strong>"</div>
-      </div>`;
+    resultEl.innerHTML = `<div class="worker-search-result"><div class="wsr-header">🔍 Search Result</div><div class="wsr-not-found">No worker found matching "<strong style="color:var(--text)">${query}</strong>"</div></div>`;
     return;
   }
 
-  // Enrich with local assignment data if available
   const localMap = {};
   _assignments.forEach(a => { localMap[a.omang_number] = a; });
 
@@ -721,111 +866,77 @@ function searchWorker(query) {
   matches.forEach(a => {
     const local = localMap[a.omang_number];
     const age = local ? local._age : null;
-    const elder = age !== null && age >= 65;
-    if (!byWorker[a.omang_number]) byWorker[a.omang_number] = {
-      name: `${a.first_name} ${a.surname}`, omang: a.omang_number,
-      sites: [], elder, age
-    };
+    if (!byWorker[a.omang_number]) byWorker[a.omang_number] = { name:`${a.first_name} ${a.surname}`, omang:a.omang_number, sites:[], elder:age !== null && age >= 65, age };
     const site = _sites.find(s => s.id === a.site_id);
-    byWorker[a.omang_number].sites.push({ siteName: site ? site.site_name : 'Unknown Site', source: a.source });
+    byWorker[a.omang_number].sites.push({ siteName: site ? site.site_name : 'Unknown', source: a.source });
   });
 
   const rows = Object.values(byWorker).map(w => `
     <div class="wsr-item">
       <div style="flex:1">
-        <div class="wsr-name">
-          ${w.name}
-          ${w.elder ? `<span class="elder-badge">🔴 65+</span>` : ''}
-        </div>
+        <div class="wsr-name">${w.name}${w.elder ? `<span class="elder-badge">🔴 65+</span>` : ''}</div>
         <div class="wsr-omang">🆔 ${w.omang}${w.age !== null ? ` · Age ${w.age}` : ''}</div>
       </div>
-      <div class="wsr-site">
-        ${w.sites.map(s => `
-          <div class="wsr-site-name">📍 ${s.siteName}</div>
-          <div class="wsr-site-src">${s.source === 'waiting_list' ? 'Waiting List' : 'Special Workers'}</div>
-        `).join('')}
-      </div>
+      <div class="wsr-site">${w.sites.map(s => `<div class="wsr-site-name">📍 ${s.siteName}</div><div class="wsr-site-src">${s.source === 'waiting_list' ? 'Waiting List' : 'Special'}</div>`).join('')}</div>
     </div>`).join('');
 
   resultEl.style.display = 'block';
-  resultEl.innerHTML = `
-    <div class="worker-search-result">
-      <div class="wsr-header">🔍 Found ${Object.keys(byWorker).length} worker${Object.keys(byWorker).length !== 1 ? 's' : ''}</div>
-      ${rows}
-    </div>`;
+  resultEl.innerHTML = `<div class="worker-search-result"><div class="wsr-header">🔍 Found ${Object.keys(byWorker).length} worker${Object.keys(byWorker).length !== 1 ? 's' : ''}</div>${rows}</div>`;
 }
 
 // ── Render Sites ───────────────────────────────────────────────────────────
 function renderSites() {
-  // Stats always use unfiltered counts
-  const totalAssigned = _assignments.length;
-  const fullCount = _sites.filter(s => {
-    const count = _assignments.filter(a => a.site_id === s.id).length;
-    return count >= s.allocated_slots;
-  }).length;
-
   document.getElementById('stat-sites').textContent    = _sites.length;
-  document.getElementById('stat-assigned').textContent = totalAssigned;
-  document.getElementById('stat-full').textContent     = fullCount;
+  document.getElementById('stat-assigned').textContent = _assignments.length;
+  document.getElementById('stat-full').textContent     = _sites.filter(s => _assignments.filter(a => a.site_id === s.id).length >= s.allocated_slots).length;
 
   const el = document.getElementById('sitesList');
-  if (!_sites.length) {
-    el.innerHTML = `<div class="empty-state">No sites added yet. Click "+ Add Site" to create your first work site.</div>`;
-    return;
-  }
+  if (!_sites.length) { el.innerHTML = `<div class="empty-state">No sites added yet. Click "+ Add Site" to get started.</div>`; return; }
 
   el.innerHTML = _sites.map(site => {
-    // Use full count for progress/slots logic
     const allAssigned = _assignments.filter(a => a.site_id === site.id);
-    const count = allAssigned.length;
-    const slots = site.allocated_slots;
-    const pct   = slots > 0 ? Math.min((count / slots) * 100, 100) : 0;
-    const isFull = count >= slots;
-    const isNear = !isFull && pct >= 70;
-    const statusClass = isFull ? 'full' : isNear ? 'near' : 'open';
-    const fillClass   = isFull ? 'fill-full' : isNear ? 'fill-near' : 'fill-open';
-    const badgeClass  = isFull ? 'slots-full' : isNear ? 'slots-near' : 'slots-open';
-    const badgeText   = isFull ? '🔴 Full' : isNear ? `🟠 ${slots - count} left` : `🟢 ${slots - count} open`;
-    const icon        = getSiteIcon(site.site_name);
-
-    // Use filtered assigned for display
+    const count   = allAssigned.length;
+    const slots   = site.allocated_slots;
+    const pct     = slots > 0 ? Math.min((count / slots) * 100, 100) : 0;
+    const isFull  = count >= slots;
+    const isNear  = !isFull && pct >= 70;
+    const stClass = isFull ? 'full' : isNear ? 'near' : 'open';
+    const fillCls = isFull ? 'fill-full' : isNear ? 'fill-near' : 'fill-open';
+    const badgeCls= isFull ? 'slots-full' : isNear ? 'slots-near' : 'slots-open';
+    const badgeTxt= isFull ? '🔴 Full' : isNear ? `🟠 ${slots - count} left` : `🟢 ${slots - count} open`;
+    const icon    = getSiteIcon(site.site_name);
     const assigned = getFilteredAssignments(site.id);
-    const filterLabel = _activeVillage !== 'all' ? ` (${_activeVillage})` : '';
+    const exportUrl= PROJECT_ID ? `export.html?project=${PROJECT_ID}&site=${site.id}` : `export.html?site=${site.id}`;
 
     return `
-    <div class="site-card ${statusClass}" id="sitecard-${site.id}">
+    <div class="site-card ${stClass}" id="sitecard-${site.id}">
       <div class="site-header">
         <div class="site-icon">${icon}</div>
         <div class="site-meta">
           <div class="site-name">${site.site_name}</div>
           <div class="site-slots-row">
-            <span class="slots-badge ${badgeClass}">${badgeText}</span>
+            <span class="slots-badge ${badgeCls}">${badgeTxt}</span>
             <span style="font-size:.58rem;color:var(--muted)">${count} / ${slots} workers total</span>
             ${_activeVillage !== 'all' ? `<span style="font-size:.58rem;color:var(--purple)">${assigned.length} from ${_activeVillage}</span>` : ''}
           </div>
         </div>
         <div class="site-actions">
-          <button class="btn-pdf-site" onclick="exportSitePdf('${site.id}')" title="Export this site's workers as PDF">📄 PDF</button>
-          <button class="icon-btn" onclick="openEditSiteModal('${site.id}')" title="Edit site">✏️</button>
-          <button class="icon-btn del" onclick="deleteSite('${site.id}','${site.site_name}')" title="Delete site">🗑</button>
+          <a class="btn-pdf-site" href="${exportUrl}" title="Export this site">📄</a>
+          <button class="icon-btn" onclick="openEditSiteModal('${site.id}')">✏️</button>
+          <button class="icon-btn del" onclick="deleteSite('${site.id}','${site.site_name}')">🗑</button>
         </div>
       </div>
 
       <div class="progress-wrap">
-        <div class="progress-track">
-          <div class="progress-fill ${fillClass}" style="width:${pct}%"></div>
-        </div>
-        <div class="progress-label">
-          <span>${count} assigned</span>
-          <span>${slots} slots</span>
-        </div>
+        <div class="progress-track"><div class="progress-fill ${fillCls}" style="width:${pct}%"></div></div>
+        <div class="progress-label"><span>${count} assigned</span><span>${slots} slots</span></div>
       </div>
 
       ${isFull ? `<div class="full-notice">⛔ This site is full — no more workers can be assigned</div>` : ''}
 
       <div class="site-workers">
         <div class="site-workers-header" onclick="toggleWorkers('${site.id}')">
-          <span>${assigned.length} worker${assigned.length !== 1 ? 's' : ''}${filterLabel}</span>
+          <span>${assigned.length} worker${assigned.length !== 1 ? 's' : ''}${_activeVillage !== 'all' ? ` (${_activeVillage})` : ''}</span>
           <span class="toggle-arrow" id="arrow-${site.id}">▼</span>
         </div>
         <div class="workers-list" id="workers-${site.id}">
@@ -834,17 +945,14 @@ function renderSites() {
             return `
             <div class="worker-row">
               <div class="worker-row-info">
-                <div class="worker-row-name">
-                  ${a.first_name} ${a.surname}
-                  ${elder ? `<span class="elder-badge">🔴 65+</span>` : ''}
-                </div>
+                <div class="worker-row-name">${a.first_name} ${a.surname}${elder ? `<span class="elder-badge">🔴 65+</span>` : ''}</div>
                 <div class="worker-row-meta">
                   <span>🆔 ${a.omang_number}</span>
                   ${a._age !== null ? `<span>Age: ${a._age}</span>` : ''}
                   ${a._village && a._village !== '—' ? `<span>📍 ${a._village}</span>` : ''}
                   ${a._dob ? `<span>🎂 ${a._dob}</span>` : ''}
-                  ${a._last_worked_date ? `<span>🗓 Last worked: ${fmtDate(a._last_worked_date)}</span>` : ''}
-                  ${a._total_employments != null ? `<span>💼 Employed: ${a._total_employments}x</span>` : ''}
+                  ${a._last_worked_date ? `<span>🗓 Last: ${fmtDate(a._last_worked_date)}</span>` : ''}
+                  ${a._total_employments != null ? `<span>💼 ${a._total_employments}x</span>` : ''}
                 </div>
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;">
@@ -855,7 +963,7 @@ function renderSites() {
           }).join('') : `<div class="pick-empty">${_activeVillage !== 'all' ? `No workers from ${_activeVillage} at this site` : 'No workers assigned yet'}</div>`}
           ${!isFull ? `
             <button class="assign-btn" onclick="openAssignModal('${site.id}','${site.site_name}',${slots - count})">+ Assign Workers (${slots - count} slot${slots - count !== 1 ? 's' : ''} available)</button>
-            <button class="auto-assign-site-btn" onclick="openAutoAssignModal('${site.id}')">⚡ Auto-Fill This Site (${slots - count} slot${slots - count !== 1 ? 's' : ''})</button>
+            <button class="auto-assign-site-btn" onclick="openAutoAssignModal('${site.id}')">⚡ Auto-Fill This Site</button>
           ` : ''}
         </div>
       </div>
@@ -865,30 +973,28 @@ function renderSites() {
 
 function getSiteIcon(name) {
   const n = name.toLowerCase();
-  if (n.includes('court'))    return '⚖️';
-  if (n.includes('food'))     return '🍽️';
-  if (n.includes('eac'))      return '🏛️';
-  if (n.includes('school'))   return '🏫';
+  if (n.includes('court'))   return '⚖️';
+  if (n.includes('food'))    return '🍽️';
+  if (n.includes('eac'))     return '🏛️';
+  if (n.includes('school'))  return '🏫';
   if (n.includes('clinic') || n.includes('hospital')) return '🏥';
-  if (n.includes('road'))     return '🛤️';
-  if (n.includes('farm'))     return '🌾';
-  if (n.includes('office'))   return '🏢';
-  if (n.includes('park'))     return '🌳';
+  if (n.includes('road'))    return '🛤️';
+  if (n.includes('farm'))    return '🌾';
+  if (n.includes('office'))  return '🏢';
+  if (n.includes('park'))    return '🌳';
   return '📍';
 }
 
 function toggleWorkers(siteId) {
-  const list  = document.getElementById(`workers-${siteId}`);
-  const arrow = document.getElementById(`arrow-${siteId}`);
-  list.classList.toggle('open');
-  arrow.classList.toggle('open');
+  document.getElementById(`workers-${siteId}`).classList.toggle('open');
+  document.getElementById(`arrow-${siteId}`).classList.toggle('open');
 }
 
 // ── Add / Edit Site Modal ──────────────────────────────────────────────────
 function openAddSiteModal() {
   _editSiteId = null;
   document.getElementById('siteModalTitle').textContent = 'Add Work Site';
-  document.getElementById('sf-name').value  = '';
+  document.getElementById('sf-name').value = '';
   document.getElementById('sf-slots').value = '';
   document.getElementById('siteFormErr').textContent = '';
   document.getElementById('siteSaveBtn').textContent = 'Save Site';
@@ -900,7 +1006,7 @@ function openEditSiteModal(id) {
   if (!site) return;
   _editSiteId = id;
   document.getElementById('siteModalTitle').textContent = 'Edit Work Site';
-  document.getElementById('sf-name').value  = site.site_name;
+  document.getElementById('sf-name').value = site.site_name;
   document.getElementById('sf-slots').value = site.allocated_slots;
   document.getElementById('siteFormErr').textContent = '';
   document.getElementById('siteSaveBtn').textContent = 'Update Site';
@@ -913,20 +1019,14 @@ async function saveSite() {
   const name  = document.getElementById('sf-name').value.trim();
   const slots = parseInt(document.getElementById('sf-slots').value);
   const errEl = document.getElementById('siteFormErr');
-  if (!name)           { errEl.textContent = 'Site name is required.'; return; }
+  if (!name) { errEl.textContent = 'Site name is required.'; return; }
   if (!slots || slots < 1) { errEl.textContent = 'Allocated slots must be at least 1.'; return; }
-
   if (_editSiteId) {
-    const currentCount = _assignments.filter(a => a.site_id === _editSiteId).length;
-    if (slots < currentCount) {
-      errEl.textContent = `Cannot reduce slots below current assignments (${currentCount} workers assigned).`;
-      return;
-    }
+    const cc = _assignments.filter(a => a.site_id === _editSiteId).length;
+    if (slots < cc) { errEl.textContent = `Cannot reduce below current assignments (${cc}).`; return; }
   }
-
   const btn = document.getElementById('siteSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
-
   if (_editSiteId) {
     const { error } = await sb.from('sites').update({ site_name: name, allocated_slots: slots }).eq('id', _editSiteId);
     if (error) { errEl.textContent = error.message; btn.disabled = false; btn.textContent = 'Update Site'; return; }
@@ -936,103 +1036,136 @@ async function saveSite() {
     if (error) { errEl.textContent = error.message; btn.disabled = false; btn.textContent = 'Save Site'; return; }
     showToast(`${name} added ✓`, 'success');
   }
-
-  btn.disabled = false;
-  closeSiteModal();
-  await Promise.all([loadSites(), loadAssignments()]);
-  renderVillageFilter();
-  renderSites();
+  btn.disabled = false; closeSiteModal(); await reloadAll();
 }
 
 async function deleteSite(id, name) {
   const count = _assignments.filter(a => a.site_id === id).length;
-  const msg = count > 0
-    ? `Delete "${name}"? This will also remove ${count} worker assignment${count !== 1 ? 's' : ''} for ALL projects.`
-    : `Delete "${name}"? This cannot be undone.`;
+  const msg = count > 0 ? `Delete "${name}"? This will remove ${count} assignment(s) for ALL projects.` : `Delete "${name}"?`;
   if (!confirm(msg)) return;
   const { error } = await sb.from('sites').delete().eq('id', id);
   if (error) { showToast('Error: ' + error.message, 'error'); return; }
-  showToast(`${name} deleted`, 'info');
-  await Promise.all([loadSites(), loadAssignments()]);
-  renderVillageFilter();
-  renderSites();
+  showToast(`${name} deleted`, 'info'); await reloadAll();
 }
 
 // ── Assign Worker Modal ────────────────────────────────────────────────────
 async function openAssignModal(siteId, siteName, slotsLeft) {
   if (!PROJECT_ID) { showToast('No project selected', 'error'); return; }
-  _assignSiteId    = siteId;
-  _assignSource    = 'waiting_list';
-  _selectedWorkers = new Set();
+  _assignSiteId = siteId; _assignSource = 'waiting_list';
+  _selectedWorkers = new Set(); _assignVillageFilter = 'all';
   document.getElementById('assignModalTitle').textContent = `Assign to: ${siteName}`;
-
   const warn = document.getElementById('slotsWarning');
   warn.style.display = slotsLeft <= 3 ? 'block' : 'none';
   if (slotsLeft <= 3) warn.textContent = `⚠ Only ${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} remaining`;
-
   document.getElementById('stab-waiting').classList.add('active');
   document.getElementById('stab-special').classList.remove('active');
-
   await fetchAvailableWorkers();
+  renderAssignVillageFilter();
+  renderVqAssignNotice(siteId);
   renderWorkerPicker();
   document.getElementById('assignModal').classList.add('open');
 }
 
 function closeAssignModal() {
   document.getElementById('assignModal').classList.remove('open');
-  _selectedWorkers = new Set();
+  _selectedWorkers = new Set(); _assignVillageFilter = 'all';
 }
 
 async function switchSource(source) {
-  _assignSource    = source;
-  _selectedWorkers = new Set();
+  _assignSource = source; _selectedWorkers = new Set(); _assignVillageFilter = 'all';
   document.getElementById('stab-waiting').classList.toggle('active', source === 'waiting_list');
   document.getElementById('stab-special').classList.toggle('active', source === 'special_workers');
   await fetchAvailableWorkers();
+  renderAssignVillageFilter();
+  renderVqAssignNotice(_assignSiteId);
+  renderWorkerPicker();
+}
+
+function renderVqAssignNotice(siteId) {
+  const noticeEl = document.getElementById('vqAssignNotice');
+  const hasAnyQuota = getAllVillages().some(v => (_villageQuotas[v] || 0) > 0);
+  if (!hasAnyQuota || _assignSource !== 'waiting_list') { noticeEl.style.display = 'none'; return; }
+  const lines = getAllVillages().filter(v => (_villageQuotas[v] || 0) > 0).map(v => {
+    const quota = _villageQuotas[v];
+    const assigned = _assignments.filter(a => a._village === v).length;
+    const left = quota - assigned;
+    return `<b>${v}</b>: ${assigned}/${quota} ${left < 0 ? '⚠ over' : `(${left} left)`}`;
+  }).join(' · ');
+  noticeEl.style.display = 'block';
+  noticeEl.className = 'vq-notice';
+  noticeEl.innerHTML = `🎯 Village quotas active:<br>${lines}`;
+}
+
+function renderAssignVillageFilter() {
+  const wrap = document.getElementById('assignVillageFilter');
+  if (_assignSource !== 'waiting_list') { wrap.style.display = 'none'; return; }
+  const villageSet = new Set(_availableWorkers.map(w => w.village).filter(Boolean));
+  const villages   = Array.from(villageSet).sort();
+  if (!villages.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  let html = `<span class="avf-chip ${_assignVillageFilter === 'all' ? 'active' : ''}" onclick="setAssignVillageFilter('all')">All (${_availableWorkers.length})</span>`;
+  villages.forEach(v => {
+    const cnt  = _availableWorkers.filter(w => w.village === v).length;
+    const vq   = _villageQuotas[v] || 0;
+    const asgn = _assignments.filter(a => a._village === v).length;
+    const left = vq > 0 ? Math.max(0, vq - asgn) : null;
+    const hint = left !== null ? `/${vq} · ${left} left` : '';
+    html += `<span class="avf-chip ${_assignVillageFilter === v ? 'active' : ''}" onclick="setAssignVillageFilter('${v.replace(/'/g,"\\'")}')">
+      ${v} (${cnt}${hint})
+    </span>`;
+  });
+  document.getElementById('assignVillageChips').innerHTML = html;
+}
+
+function setAssignVillageFilter(village) {
+  _assignVillageFilter = village;
+  renderAssignVillageFilter();
   renderWorkerPicker();
 }
 
 async function fetchAvailableWorkers() {
   const assignedOmangs = new Set(_assignments.map(a => a.omang_number));
-
   if (_assignSource === 'waiting_list') {
     const { data, error } = await sb.from('waiting_list')
       .select('id,first_name,surname,omang_number,village,qualification,date_of_birth,last_worked_date,total_employments')
-      .eq('project_id', PROJECT_ID)
-      .order('registered_date', { ascending: true });
+      .eq('project_id', PROJECT_ID).order('registered_date', { ascending: true });
     if (error) { showToast('Error: ' + error.message, 'error'); _availableWorkers = []; return; }
-    _availableWorkers = (data || []).filter(w => !assignedOmangs.has(w.omang_number))
-      .map(w => ({ ...w, _age: calcAge(w.date_of_birth) }));
+    _availableWorkers = (data || []).filter(w => !assignedOmangs.has(w.omang_number)).map(w => ({ ...w, _age: calcAge(w.date_of_birth) }));
   } else {
-    const { data, error } = await sb.from('special_workers')
-      .select('id,first_name,surname,omang_number,village,category,date_of_birth,start_date')
-      .order('surname');
+    const { data, error } = await sb.from('special_workers').select('id,first_name,surname,omang_number,village,category,date_of_birth').order('surname');
     if (error) { showToast('Error: ' + error.message, 'error'); _availableWorkers = []; return; }
-    _availableWorkers = (data || []).filter(w => !assignedOmangs.has(w.omang_number))
-      .map(w => ({ ...w, _age: calcAge(w.date_of_birth) }));
+    _availableWorkers = (data || []).filter(w => !assignedOmangs.has(w.omang_number)).map(w => ({ ...w, _age: calcAge(w.date_of_birth) }));
   }
 }
 
 function renderWorkerPicker() {
   const el = document.getElementById('workerPickList');
-  if (!_availableWorkers.length) {
-    el.innerHTML = `<div class="pick-empty">${_assignSource === 'waiting_list' ? 'No unassigned workers in waiting list.' : 'No unassigned special workers.'}</div>`;
+  let workers = _availableWorkers;
+  if (_assignVillageFilter !== 'all' && _assignSource === 'waiting_list') {
+    workers = _availableWorkers.filter(w => w.village === _assignVillageFilter);
+  }
+  if (!workers.length) {
+    el.innerHTML = `<div class="pick-empty">${_assignVillageFilter !== 'all' ? `No unassigned workers from ${_assignVillageFilter}.` : _assignSource === 'waiting_list' ? 'No unassigned workers in waiting list.' : 'No unassigned special workers.'}</div>`;
     return;
   }
-  el.innerHTML = _availableWorkers.map(w => {
+  el.innerHTML = workers.map(w => {
     const isSelected = _selectedWorkers.has(w.omang_number);
     const elder = w._age !== null && w._age >= 65;
+    const vq   = _villageQuotas[w.village] || 0;
+    const asgn = vq > 0 ? _assignments.filter(a => a._village === w.village).length : 0;
+    const vqLeft = vq > 0 ? Math.max(0, vq - asgn) : null;
+    const vqHint = vqLeft !== null
+      ? (vqLeft === 0 ? `<span style="color:var(--orange);font-size:.55rem;"> · ⚠ Village quota full</span>` : `<span style="color:var(--muted);font-size:.55rem;"> · quota ${asgn}/${vq}</span>`)
+      : '';
     const meta = _assignSource === 'waiting_list'
-      ? `📍 ${w.village || '—'} · 🎓 ${w.qualification}${w._age !== null ? ` · Age ${w._age}` : ''}${w.last_worked_date ? ` · Last: ${fmtDate(w.last_worked_date)}` : ''}${w.total_employments != null ? ` · ${w.total_employments}x employed` : ''}`
+      ? `📍 ${w.village || '—'} · 🎓 ${w.qualification}${w._age !== null ? ` · Age ${w._age}` : ''}${w.last_worked_date ? ` · Last: ${fmtDate(w.last_worked_date)}` : ''}${w.total_employments != null ? ` · ${w.total_employments}x` : ''}`
       : `📍 ${w.village || '—'} · ${w.category}${w._age !== null ? ` · Age ${w._age}` : ''}`;
     return `
-    <div class="worker-pick-item ${isSelected ? 'selected' : ''} ${elder ? 'elder-item' : ''}" onclick="togglePickWorker('${w.omang_number}','${w.first_name}','${w.surname}')">
+    <div class="worker-pick-item ${isSelected ? 'selected' : ''} ${elder ? 'elder-item' : ''}" onclick="togglePickWorker('${w.omang_number}')">
       <div class="pick-check">${isSelected ? '✓' : ''}</div>
       <div class="pick-info">
-        <div class="pick-name">
-          ${w.first_name} ${w.surname}
-          ${elder ? `<span class="elder-badge">🔴 65+</span>` : ''}
-        </div>
+        <div class="pick-name">${w.first_name} ${w.surname}${elder ? `<span class="elder-badge">🔴 65+</span>` : ''}${vqHint}</div>
         <div class="pick-meta">🆔 ${w.omang_number} · ${meta}</div>
       </div>
     </div>`;
@@ -1041,24 +1174,18 @@ function renderWorkerPicker() {
 
 function togglePickWorker(omang) {
   const site = _sites.find(s => s.id === _assignSiteId);
-  const currentCount = _assignments.filter(a => a.site_id === _assignSiteId).length;
-  const slotsLeft = site.allocated_slots - currentCount;
-
+  const slotsLeft = site.allocated_slots - _assignments.filter(a => a.site_id === _assignSiteId).length;
   if (!_selectedWorkers.has(omang) && _selectedWorkers.size >= slotsLeft) {
-    showToast(`Only ${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} available`, 'error');
-    return;
+    showToast(`Only ${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} available`, 'error'); return;
   }
-  if (_selectedWorkers.has(omang)) _selectedWorkers.delete(omang);
-  else _selectedWorkers.add(omang);
+  _selectedWorkers.has(omang) ? _selectedWorkers.delete(omang) : _selectedWorkers.add(omang);
   renderWorkerPicker();
-
   const btn = document.getElementById('assignSaveBtn');
   btn.textContent = _selectedWorkers.size > 0 ? `Assign ${_selectedWorkers.size} Worker${_selectedWorkers.size !== 1 ? 's' : ''}` : 'Assign Selected';
 }
 
 async function confirmAssign() {
   if (!_selectedWorkers.size) { showToast('Select at least one worker', 'error'); return; }
-
   const btn = document.getElementById('assignSaveBtn');
   btn.disabled = true; btn.textContent = 'Assigning…';
 
@@ -1072,15 +1199,9 @@ async function confirmAssign() {
   const { error } = await sb.from('site_assignments').insert(toInsert);
   btn.disabled = false;
   if (error) { showToast('Error: ' + error.message, 'error'); btn.textContent = 'Assign Selected'; return; }
-
   showToast(`${toInsert.length} worker${toInsert.length !== 1 ? 's' : ''} assigned ✓`, 'success');
-  closeAssignModal();
-  await loadAssignments();
-  renderVillageFilter();
-  renderSites();
-  renderQuotaBanner();
-
-  const list = document.getElementById(`workers-${_assignSiteId}`);
+  closeAssignModal(); await reloadAll();
+  const list  = document.getElementById(`workers-${_assignSiteId}`);
   const arrow = document.getElementById(`arrow-${_assignSiteId}`);
   if (list && !list.classList.contains('open')) { list.classList.add('open'); arrow.classList.add('open'); }
 }
@@ -1091,48 +1212,60 @@ async function removeAssignment(id, name, siteId) {
   const { error } = await sb.from('site_assignments').delete().eq('id', id);
   if (error) { showToast('Error: ' + error.message, 'error'); return; }
   showToast(`${name} removed ✓`, 'info');
-  await loadAssignments();
-  renderVillageFilter();
-  renderSites();
-  renderQuotaBanner();
-  const list = document.getElementById(`workers-${siteId}`);
+  await reloadAll();
+  const list  = document.getElementById(`workers-${siteId}`);
   const arrow = document.getElementById(`arrow-${siteId}`);
   if (list) { list.classList.add('open'); arrow.classList.add('open'); }
 }
 
-// ── AUTO-ASSIGN ────────────────────────────────────────────────────────────
-let _autoPrefilledSiteId = null;
+// ── Reload helper ──────────────────────────────────────────────────────────
+async function reloadAll() {
+  await Promise.all([loadSites(), loadAssignments(), loadWaitingListVillages()]);
+  renderVillageFilter(); renderVqPanel(); renderSites(); renderQuotaBanner();
+}
 
+// ── AUTO-ASSIGN ────────────────────────────────────────────────────────────
 async function openAutoAssignModal(prefilledSiteId = null) {
   if (!PROJECT_ID) { showToast('No project selected', 'error'); return; }
-  _autoPrefilledSiteId = prefilledSiteId;
 
-  const openSites = _sites.filter(s => {
+  const openSites = _sites.filter(s => _assignments.filter(a => a.site_id === s.id).length < s.allocated_slots);
+  document.getElementById('auto-site-id').innerHTML = openSites.map(s => {
     const c = _assignments.filter(a => a.site_id === s.id).length;
-    return c < s.allocated_slots;
-  });
-  const siteOpts = openSites.map(s => {
-    const c = _assignments.filter(a => a.site_id === s.id).length;
-    return `<option value="${s.id}">${s.site_name} (${s.allocated_slots - c} slots open)</option>`;
+    return `<option value="${s.id}">${s.site_name} (${s.allocated_slots - c} open)</option>`;
   }).join('');
-  document.getElementById('auto-site-id').innerHTML = siteOpts;
+
+  const villages = getAllVillages();
+  document.getElementById('auto-village-filter').innerHTML =
+    `<option value="">— All villages —</option>` +
+    villages.map(v => {
+      const vq = _villageQuotas[v] || 0;
+      const asgn = _assignments.filter(a => a._village === v).length;
+      const hint = vq > 0 ? ` (quota: ${vq}, assigned: ${asgn})` : '';
+      return `<option value="${v}">${v}${hint}</option>`;
+    }).join('');
 
   const modeEl = document.getElementById('auto-mode');
+  const villageWrap = document.getElementById('auto-village-wrap');
+
   if (prefilledSiteId) {
     modeEl.value = 'single';
     document.getElementById('auto-site-pick').style.display = 'block';
     document.getElementById('auto-site-id').value = prefilledSiteId;
+    villageWrap.style.display = 'none';
   } else {
     modeEl.value = 'all';
     document.getElementById('auto-site-pick').style.display = 'none';
+    villageWrap.style.display = 'block';
   }
 
   modeEl.onchange = () => {
     document.getElementById('auto-site-pick').style.display = modeEl.value === 'single' ? 'block' : 'none';
+    villageWrap.style.display = modeEl.value === 'all' ? 'block' : 'none';
     updateAutoPreview();
   };
-  document.getElementById('auto-source').onchange = updateAutoPreview;
+  document.getElementById('auto-source').onchange  = updateAutoPreview;
   document.getElementById('auto-site-id').onchange = updateAutoPreview;
+  document.getElementById('auto-village-filter').onchange = updateAutoPreview;
 
   await updateAutoPreview();
   document.getElementById('autoAssignModal').classList.add('open');
@@ -1141,83 +1274,100 @@ async function openAutoAssignModal(prefilledSiteId = null) {
 function closeAutoAssignModal() { document.getElementById('autoAssignModal').classList.remove('open'); }
 
 async function updateAutoPreview() {
-  const source = document.getElementById('auto-source').value;
-  const mode   = document.getElementById('auto-mode').value;
-  const singleSiteId = document.getElementById('auto-site-id').value;
-
+  const source        = document.getElementById('auto-source').value;
+  const mode          = document.getElementById('auto-mode').value;
+  const singleSiteId  = document.getElementById('auto-site-id').value;
+  const villageFilter = document.getElementById('auto-village-filter').value;
   const assignedOmangs = new Set(_assignments.map(a => a.omang_number));
   let workers = [];
+
   if (source === 'waiting_list') {
-    const { data } = await sb.from('waiting_list').select('id,first_name,surname,omang_number').eq('project_id', PROJECT_ID).order('registered_date', { ascending: true });
+    let q = sb.from('waiting_list').select('id,first_name,surname,omang_number,village').eq('project_id', PROJECT_ID).order('registered_date', { ascending: true });
+    if (villageFilter) q = q.eq('village', villageFilter);
+    const { data } = await q;
     workers = (data || []).filter(w => !assignedOmangs.has(w.omang_number));
   } else {
     const { data } = await sb.from('special_workers').select('id,first_name,surname,omang_number').order('surname');
     workers = (data || []).filter(w => !assignedOmangs.has(w.omang_number));
   }
 
-  let targetSites = [];
-  if (mode === 'all') {
-    targetSites = _sites.filter(s => { const c = _assignments.filter(a => a.site_id === s.id).length; return c < s.allocated_slots; });
-  } else {
-    const s = _sites.find(x => x.id === singleSiteId);
-    if (s) { const c = _assignments.filter(a => a.site_id === s.id).length; if (c < s.allocated_slots) targetSites = [s]; }
+  if (villageFilter && source === 'waiting_list') {
+    const vq = _villageQuotas[villageFilter] || 0;
+    if (vq > 0) {
+      const alreadyVillage = _assignments.filter(a => a._village === villageFilter).length;
+      workers = workers.slice(0, Math.max(0, vq - alreadyVillage));
+    }
   }
 
-  let workerIdx = 0, totalToAssign = 0;
+  let targetSites = mode === 'all'
+    ? _sites.filter(s => _assignments.filter(a => a.site_id === s.id).length < s.allocated_slots)
+    : (() => { const s = _sites.find(x => x.id === singleSiteId); return s && _assignments.filter(a => a.site_id === s.id).length < s.allocated_slots ? [s] : []; })();
+
+  let wi = 0, total = 0;
   const siteAllocs = targetSites.map(s => {
     const c = _assignments.filter(a => a.site_id === s.id).length;
     const slotsLeft = s.allocated_slots - c;
-    const canAssign = Math.min(slotsLeft, workers.length - workerIdx);
-    workerIdx += canAssign; totalToAssign += canAssign;
+    const canAssign = Math.min(slotsLeft, workers.length - wi);
+    wi += canAssign; total += canAssign;
     return { site: s, slotsLeft, canAssign };
   });
 
-  document.getElementById('autoInfoBox').innerHTML = `
-    <b>${workers.length}</b> unassigned workers available.<br>
-    <b>${totalToAssign}</b> will be assigned across <b>${targetSites.length}</b> site${targetSites.length !== 1 ? 's' : ''}.
-    ${workers.length === 0 ? '<br><span style="color:var(--red)">⚠ No available workers.</span>' : ''}`;
+  document.getElementById('autoInfoBox').innerHTML =
+    `<b>${workers.length}</b> unassigned workers available${villageFilter ? ` from <b>${villageFilter}</b>` : ''}.
+     <b>${total}</b> will be assigned across <b>${targetSites.length}</b> site${targetSites.length !== 1 ? 's' : ''}.
+     ${workers.length === 0 ? '<br><span style="color:var(--red)">⚠ No available workers.</span>' : ''}`;
 
-  document.getElementById('autoSitePreview').innerHTML = siteAllocs.length ? siteAllocs.map(({ site, slotsLeft, canAssign }) => `
-    <div class="auto-site-row">
-      <div><div class="auto-site-row-name">${site.site_name}</div><div class="auto-site-row-slots">${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} open</div></div>
-      <span class="auto-site-row-badge">+${canAssign} workers</span>
-    </div>`).join('') : `<div class="pick-empty">No open sites to fill.</div>`;
+  document.getElementById('autoSitePreview').innerHTML = siteAllocs.length
+    ? siteAllocs.map(({ site, slotsLeft, canAssign }) => `
+      <div class="auto-site-row">
+        <div><div class="auto-site-row-name">${site.site_name}</div><div class="auto-site-row-slots">${slotsLeft} slot${slotsLeft !== 1 ? 's' : ''} open</div></div>
+        <span class="auto-site-row-badge">+${canAssign} workers</span>
+      </div>`).join('')
+    : `<div class="pick-empty">No open sites to fill.</div>`;
 
-  document.getElementById('autoAssignRunBtn').disabled = totalToAssign === 0;
+  document.getElementById('autoAssignRunBtn').disabled = total === 0;
 }
 
 async function runAutoAssign() {
-  const source = document.getElementById('auto-source').value;
-  const mode   = document.getElementById('auto-mode').value;
-  const singleSiteId = document.getElementById('auto-site-id').value;
+  const source        = document.getElementById('auto-source').value;
+  const mode          = document.getElementById('auto-mode').value;
+  const singleSiteId  = document.getElementById('auto-site-id').value;
+  const villageFilter = document.getElementById('auto-village-filter').value;
   const btn = document.getElementById('autoAssignRunBtn');
   btn.disabled = true; btn.textContent = '⚡ Assigning…';
 
   const assignedOmangs = new Set(_assignments.map(a => a.omang_number));
   let workers = [];
+
   if (source === 'waiting_list') {
-    const { data } = await sb.from('waiting_list').select('id,first_name,surname,omang_number').eq('project_id', PROJECT_ID).order('registered_date', { ascending: true });
+    let q = sb.from('waiting_list').select('id,first_name,surname,omang_number,village').eq('project_id', PROJECT_ID).order('registered_date', { ascending: true });
+    if (villageFilter) q = q.eq('village', villageFilter);
+    const { data } = await q;
     workers = (data || []).filter(w => !assignedOmangs.has(w.omang_number));
   } else {
     const { data } = await sb.from('special_workers').select('id,first_name,surname,omang_number').order('surname');
     workers = (data || []).filter(w => !assignedOmangs.has(w.omang_number));
   }
 
-  let targetSites = [];
-  if (mode === 'all') {
-    targetSites = _sites.filter(s => { const c = _assignments.filter(a => a.site_id === s.id).length; return c < s.allocated_slots; });
-  } else {
-    const s = _sites.find(x => x.id === singleSiteId);
-    if (s) { const c = _assignments.filter(a => a.site_id === s.id).length; if (c < s.allocated_slots) targetSites = [s]; }
+  if (villageFilter && source === 'waiting_list') {
+    const vq = _villageQuotas[villageFilter] || 0;
+    if (vq > 0) {
+      const av = _assignments.filter(a => a._village === villageFilter).length;
+      workers = workers.slice(0, Math.max(0, vq - av));
+    }
   }
 
+  let targetSites = mode === 'all'
+    ? _sites.filter(s => _assignments.filter(a => a.site_id === s.id).length < s.allocated_slots)
+    : (() => { const s = _sites.find(x => x.id === singleSiteId); return s && _assignments.filter(a => a.site_id === s.id).length < s.allocated_slots ? [s] : []; })();
+
   const toInsert = [];
-  let workerIdx = 0;
+  let wi = 0;
   for (const site of targetSites) {
     const c = _assignments.filter(a => a.site_id === site.id).length;
-    const slotsLeft = site.allocated_slots - c;
-    for (let i = 0; i < slotsLeft && workerIdx < workers.length; i++, workerIdx++) {
-      const w = workers[workerIdx];
+    const sl = site.allocated_slots - c;
+    for (let i = 0; i < sl && wi < workers.length; i++, wi++) {
+      const w = workers[wi];
       toInsert.push({ site_id: site.id, project_id: PROJECT_ID, omang_number: w.omang_number, first_name: w.first_name, surname: w.surname, source });
     }
   }
@@ -1226,307 +1376,9 @@ async function runAutoAssign() {
 
   const { error } = await sb.from('site_assignments').insert(toInsert);
   btn.disabled = false; btn.textContent = '⚡ Auto-Assign Now';
-
   if (error) { showToast('Error: ' + error.message, 'error'); return; }
-  showToast(`✓ ${toInsert.length} worker${toInsert.length !== 1 ? 's' : ''} auto-assigned!`, 'success');
-  closeAutoAssignModal();
-  await loadAssignments();
-  renderVillageFilter();
-  renderSites();
-  renderQuotaBanner();
-}
-
-// ── PDF EXPORT ─────────────────────────────────────────────────────────────
-function openPdfModal() {
-  const siteOpts = _sites.map(s => `<option value="${s.id}">${s.site_name}</option>`).join('');
-  document.getElementById('pdf-site-id').innerHTML = siteOpts;
-
-  const villages = getVillages();
-  document.getElementById('pdf-village-id').innerHTML = villages.map(v => `<option value="${v}">${v}</option>`).join('');
-
-  selectPdfScope('all');
-  document.getElementById('pdfModal').classList.add('open');
-}
-
-function closePdfModal() { document.getElementById('pdfModal').classList.remove('open'); }
-
-function selectPdfScope(scope) {
-  _pdfScope = scope;
-  document.querySelectorAll('.pdf-scope-opt').forEach(el => el.classList.toggle('selected', el.dataset.scope === scope));
-  document.getElementById('pdfSiteSelect').style.display    = scope === 'site'    ? 'block' : 'none';
-  document.getElementById('pdfVillageSelect').style.display = scope === 'village' ? 'block' : 'none';
-}
-
-async function exportSitePdf(siteId) {
-  const site = _sites.find(s => s.id === siteId);
-  if (!site) return;
-  let workers = _assignments.filter(a => a.site_id === siteId);
-  if (_activeVillage !== 'all') workers = workers.filter(a => a._village === _activeVillage);
-  if (!workers.length) { showToast('No workers assigned to this site' + (_activeVillage !== 'all' ? ` from ${_activeVillage}` : ''), 'warn'); return; }
-  const villageLabel = _activeVillage !== 'all' ? _activeVillage : null;
-  generatePdf([{ site, workers }], {}, villageLabel);
-}
-
-function exportPdf() {
-  const btn = document.getElementById('pdfExportBtn');
-  btn.disabled = true; btn.textContent = '⏳ Generating…';
-
-  let groups = [];
-  let villageLabel = null;
-
-  if (_pdfScope === 'all') {
-    groups = _sites.map(site => ({
-      site,
-      workers: _assignments.filter(a => a.site_id === site.id)
-    })).filter(g => g.workers.length > 0);
-  } else if (_pdfScope === 'site') {
-    const siteId = document.getElementById('pdf-site-id').value;
-    const site = _sites.find(s => s.id === siteId);
-    if (site) groups = [{ site, workers: _assignments.filter(a => a.site_id === siteId) }];
-  } else if (_pdfScope === 'village') {
-    villageLabel = document.getElementById('pdf-village-id').value;
-    groups = _sites.map(site => ({
-      site,
-      workers: _assignments.filter(a => a.site_id === site.id && a._village === villageLabel)
-    })).filter(g => g.workers.length > 0);
-  }
-
-  if (!groups.length || groups.every(g => !g.workers.length)) {
-    showToast('No assigned workers to export', 'warn');
-    btn.disabled = false; btn.textContent = '📥 Download PDF';
-    return;
-  }
-
-  const opts = {
-    includeSig:          document.getElementById('col-sig').checked,
-    includeOmang:        document.getElementById('col-omang').checked,
-    includeDob:          document.getElementById('col-dob').checked,
-    includeVillage:      document.getElementById('col-village').checked,
-    includeSite:         document.getElementById('col-site').checked,
-    includeSource:       document.getElementById('col-source').checked,
-    includeLastWorked:   document.getElementById('col-last-worked').checked,
-    includeEmployments:  document.getElementById('col-employments').checked,
-    includeDate:         document.getElementById('col-date').checked,
-  };
-
-  generatePdf(groups, opts, villageLabel);
-  btn.disabled = false; btn.textContent = '📥 Download PDF';
-  closePdfModal();
-}
-
-function generatePdf(groups, opts = {}, villageLabel = null) {
-  const {
-    includeSig         = true,
-    includeOmang       = true,
-    includeDob         = true,
-    includeVillage     = true,
-    includeSite        = true,
-    includeSource      = true,
-    includeLastWorked  = false,
-    includeEmployments = false,
-    includeDate        = true,
-  } = opts;
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const margin = 14;
-  const today = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
-  const projLabel = _projectName ? `Project: ${_projectName}` : '';
-  const villageStr = villageLabel ? `Village: ${villageLabel}` : '';
-
-  // ── Header ─────────────────────────────────────────────────────────────
-  function drawHeader(siteName, siteIdx) {
-    doc.setFillColor(44, 85, 48);
-    doc.rect(0, 0, pageW, 22, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('IKAGENG — Site Allocation Report', margin, 10);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(`Generated: ${today}`, margin, 16);
-    const rightInfo = [projLabel, villageStr].filter(Boolean).join(' · ');
-    if (rightInfo) doc.text(rightInfo, pageW - margin, 16, { align: 'right' });
-
-    doc.setFillColor(24, 36, 31);
-    doc.rect(0, 22, pageW, 12, 'F');
-    doc.setTextColor(0, 201, 138);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text(`Site: ${siteName}`, margin, 30);
-
-    if (groups.length > 1) {
-      doc.setTextColor(107, 140, 132);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text(`(${siteIdx + 1} of ${groups.length})`, pageW - margin, 30, { align: 'right' });
-    }
-    doc.setTextColor(30, 30, 30);
-  }
-
-  // ── Footer ─────────────────────────────────────────────────────────────
-  function drawFooter(pageNum, totalPages) {
-    doc.setFillColor(240, 248, 244);
-    doc.rect(0, pageH - 10, pageW, 10, 'F');
-    doc.setTextColor(107, 140, 132);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.text('Ikageng Community Project — Confidential', margin, pageH - 4);
-    doc.text(`Page ${pageNum} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' });
-  }
-
-  // ── Elder legend in PDF ────────────────────────────────────────────────
-  function drawElderLegend(y) {
-    doc.setFillColor(255, 243, 224);
-    doc.setDrawColor(255, 159, 67);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(margin, y, 80, 7, 1.5, 1.5, 'FD');
-    doc.setTextColor(180, 100, 0);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.text('● Age 65+ workers are marked with [65+] in the Name column', margin + 2, y + 4.5);
-    doc.setTextColor(30, 30, 30);
-    return y + 10;
-  }
-
-  // Build columns
-  const cols = [{ header: 'No.', dataKey: 'no' }, { header: 'Full Name', dataKey: 'name' }];
-  if (includeOmang)       cols.push({ header: 'Omang No.',        dataKey: 'omang' });
-  if (includeDob)         cols.push({ header: 'Date of Birth',    dataKey: 'dob' });
-  if (includeVillage)     cols.push({ header: 'Village',          dataKey: 'village' });
-  if (includeSite)        cols.push({ header: 'Site',             dataKey: 'site' });
-  if (includeSource)      cols.push({ header: 'Source',           dataKey: 'source' });
-  if (includeLastWorked)  cols.push({ header: 'Last Worked',      dataKey: 'lastWorked' });
-  if (includeEmployments) cols.push({ header: 'Employments',      dataKey: 'employments' });
-  if (includeDate)        cols.push({ header: 'Assigned Date',    dataKey: 'date' });
-  if (includeSig)         cols.push({ header: 'Signature',        dataKey: 'sig' });
-
-  let isFirst = true;
-
-  groups.forEach((g, gIdx) => {
-    if (!isFirst) doc.addPage();
-    isFirst = false;
-
-    drawHeader(g.site.site_name, gIdx);
-
-    // Site stats band
-    const assigned = g.workers.length;
-    const slots    = g.site.allocated_slots;
-    const elderCount = g.workers.filter(w => isElder(w)).length;
-    doc.setFillColor(248, 252, 250);
-    doc.rect(margin, 36, pageW - margin * 2, 9, 'F');
-    doc.setDrawColor(200, 230, 210);
-    doc.rect(margin, 36, pageW - margin * 2, 9);
-    doc.setTextColor(60, 60, 60);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    let statsText = `Workers: ${assigned} / ${slots} slots  ·  Status: ${assigned >= slots ? 'FULL' : 'Open'}`;
-    if (elderCount > 0) statsText += `  ·  Age 65+ workers: ${elderCount}`;
-    if (villageLabel) statsText += `  ·  Village: ${villageLabel}`;
-    doc.text(statsText, margin + 3, 41.5);
-
-    // Elder legend
-    let startY = drawElderLegend(47);
-
-    const rows = g.workers.map((w, idx) => {
-      const elder = isElder(w);
-      const nameCell = elder ? `${w.first_name} ${w.surname} [65+]` : `${w.first_name} ${w.surname}`;
-      const dateStr = w.assigned_at ? new Date(w.assigned_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) : '—';
-      const row = { no: idx + 1, name: nameCell };
-      if (includeOmang)       row.omang       = w.omang_number;
-      if (includeDob)         row.dob         = w._dob || '—';
-      if (includeVillage)     row.village     = w._village || '—';
-      if (includeSite)        row.site        = g.site.site_name;
-      if (includeSource)      row.source      = w.source === 'waiting_list' ? 'Waiting List' : 'Special';
-      if (includeLastWorked)  row.lastWorked  = fmtDate(w._last_worked_date);
-      if (includeEmployments) row.employments = w._total_employments != null ? String(w._total_employments) : '—';
-      if (includeDate)        row.date        = dateStr;
-      if (includeSig)         row.sig         = '';
-      return row;
-    });
-
-    doc.autoTable({
-      columns: cols,
-      body: rows,
-      startY,
-      margin: { left: margin, right: margin },
-      styles: {
-        font: 'helvetica', fontSize: 8, cellPadding: 3, valign: 'middle',
-        lineColor: [220, 235, 225], lineWidth: 0.3,
-      },
-      headStyles: {
-        fillColor: [44, 85, 48], textColor: [255, 255, 255],
-        fontStyle: 'bold', fontSize: 7.5, halign: 'left',
-      },
-      alternateRowStyles: { fillColor: [248, 253, 250] },
-      columnStyles: {
-        no:          { cellWidth: 10, halign: 'center' },
-        name:        { cellWidth: 'auto', fontStyle: 'bold' },
-        omang:       { cellWidth: 26 },
-        dob:         { cellWidth: 22 },
-        village:     { cellWidth: 22 },
-        site:        { cellWidth: 24 },
-        source:      { cellWidth: 20 },
-        lastWorked:  { cellWidth: 22 },
-        employments: { cellWidth: 20, halign: 'center' },
-        date:        { cellWidth: 24 },
-        sig:         { cellWidth: 32, minCellHeight: 12 },
-      },
-      // Highlight 65+ rows with light amber background
-      willDrawCell: (data) => {
-        if (data.section === 'body') {
-          const rowIdx = data.row.index;
-          const worker = rows[rowIdx];
-          if (worker && worker.name && worker.name.includes('[65+]')) {
-            doc.setFillColor(255, 248, 225);
-          }
-        }
-      },
-      didDrawCell: (data) => {
-        if (data.column.dataKey === 'sig' && data.section === 'body') {
-          const x1 = data.cell.x + 3;
-          const x2 = data.cell.x + data.cell.width - 3;
-          const y  = data.cell.y + data.cell.height - 4;
-          doc.setDrawColor(180, 200, 185);
-          doc.setLineWidth(0.4);
-          doc.line(x1, y, x2, y);
-        }
-      },
-      didDrawPage: (data) => {
-        if (data.pageNumber > 1) drawHeader(g.site.site_name, gIdx);
-      },
-    });
-
-    // Summary
-    const finalY = doc.lastAutoTable.finalY + 5;
-    if (finalY < pageH - 20) {
-      doc.setFontSize(8);
-      doc.setTextColor(107, 140, 132);
-      doc.setFont('helvetica', 'italic');
-      const elderCount2 = g.workers.filter(w => isElder(w)).length;
-      let summary = `Total workers listed: ${assigned}`;
-      if (elderCount2 > 0) summary += `  |  Age 65+ workers: ${elderCount2}`;
-      doc.text(summary, margin, finalY);
-    }
-  });
-
-  // Page numbers
-  const totalPages = doc.internal.getNumberOfPages();
-  for (let p = 1; p <= totalPages; p++) {
-    doc.setPage(p);
-    drawFooter(p, totalPages);
-  }
-
-  let filename = 'ikageng_workers.pdf';
-  if (villageLabel) filename = `ikageng_${villageLabel.replace(/\s+/g,'_')}_workers.pdf`;
-  else if (groups.length === 1) filename = `ikageng_${groups[0].site.site_name.replace(/\s+/g,'_')}_workers.pdf`;
-  else filename = 'ikageng_all_sites_workers.pdf';
-
-  doc.save(filename);
-  showToast('PDF downloaded ✓', 'success');
+  showToast(`✓ ${toInsert.length} worker${toInsert.length !== 1 ? 's' : ''} assigned!`, 'success');
+  closeAutoAssignModal(); await reloadAll();
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────

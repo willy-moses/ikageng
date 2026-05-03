@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ikageng — VDC Projects</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg:      #09100f;
@@ -39,7 +40,24 @@
   .header-text h1 { font-family: 'Fraunces', serif; font-size: clamp(1.1rem,4vw,1.45rem); font-weight: 700; color: #fff; line-height: 1.2; }
   .header-text p  { font-size: .7rem; color: rgba(255,255,255,.85); margin-top: .25rem; letter-spacing: .04em; }
 
+  .header-right { margin-left: auto; flex-shrink: 0; }
+  .logout-header-btn {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+    color: #fff; font-family: 'DM Mono', monospace; font-size: .65rem;
+    padding: .4rem .9rem; border-radius: 20px; cursor: pointer;
+    transition: background .15s; letter-spacing: .06em;
+  }
+  .logout-header-btn:hover { background: rgba(255,255,255,.22); }
+
   .scroll-body { padding: 1.5rem; max-width: 720px; margin: 0 auto; width: 100%; }
+
+  .user-strip {
+    background: rgba(0,201,138,.05); border: 1px solid rgba(0,201,138,.15);
+    border-radius: 8px; padding: .6rem 1rem; margin-bottom: 1.2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: .65rem; color: var(--muted);
+  }
+  .user-strip strong { color: var(--accent); }
 
   .info-banner {
     background: rgba(232,184,75,.06); border: 1px solid rgba(232,184,75,.22);
@@ -228,9 +246,18 @@
     <h1>VDC Projects</h1>
     <p>Ipelegeng Programme — Project Management</p>
   </div>
+  <div class="header-right">
+    <button class="logout-header-btn" onclick="handleLogout()">🚪 Logout</button>
+  </div>
 </div>
 
 <div class="scroll-body">
+
+  <!-- Logged-in user strip -->
+  <div class="user-strip" id="userStrip" style="display:none">
+    <span>Logged in as <strong id="userEmail">—</strong></span>
+    <span id="userRole" style="font-size:.6rem;color:var(--muted)">Officer</span>
+  </div>
 
   <div class="stats-card" style="margin-top:.5rem">
     <h2>Overview</h2>
@@ -258,7 +285,6 @@
 <div class="modal-overlay" id="createModal">
   <div class="modal">
     <div class="modal-title">Create New Project</div>
-
     <div class="form-group">
       <label>Project Name *</label>
       <input type="text" id="c-name" placeholder="e.g., Ikageng Road Maintenance 2025">
@@ -275,7 +301,6 @@
       <label>Year *</label>
       <div class="year-row" id="yearRow"></div>
     </div>
-
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal('createModal')">Cancel</button>
       <button class="modal-confirm" onclick="createProject()">Create Project</button>
@@ -300,9 +325,12 @@
 </div>
 
 <script>
-// ── Supabase ──────────────────────────────────────────────────────────────────
+// ── Supabase setup ────────────────────────────────────────────────────────────
 const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+
+// sb must be created BEFORE the session check
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 const hdrs = {
   'Content-Type':  'application/json',
@@ -356,11 +384,9 @@ function setYear(y)  { selectedYear  = y; renderYearRow(); }
 // ── Load data ─────────────────────────────────────────────────────────────────
 async function loadProjects() {
   try {
-    // Load projects from new table
     const data = await sbFetch('projects?order=created_at.desc&select=*');
     projects = data || [];
 
-    // Load group counts grouped by project_id
     const groups = await sbFetch('groups?select=project_id').catch(() => []);
     groupCounts = {};
     (groups || []).forEach(g => {
@@ -403,7 +429,7 @@ function setBanner(text, type) {
   tx.textContent   = text;
 }
 
-// ── Render cards ──────────────────────────────────────────────────────────────
+// ── Render project cards ──────────────────────────────────────────────────────
 function renderProjects() {
   const container = document.getElementById('projectsList');
   const label     = document.getElementById('projectsLabel');
@@ -474,7 +500,7 @@ function openDeleteModal(id, name) {
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-// ── Create ────────────────────────────────────────────────────────────────────
+// ── Create project ────────────────────────────────────────────────────────────
 async function createProject() {
   const name = document.getElementById('c-name').value.trim();
   const desc = document.getElementById('c-desc').value.trim();
@@ -510,12 +536,12 @@ async function createProject() {
   }
 }
 
-// ── Select ────────────────────────────────────────────────────────────────────
+// ── Select project ────────────────────────────────────────────────────────────
 function selectProject(id) {
   window.location.href = `vdc-dashboard.html?project=${id}`;
 }
 
-// ── Delete ────────────────────────────────────────────────────────────────────
+// ── Delete project ────────────────────────────────────────────────────────────
 async function confirmDelete() {
   if (!deleteTargetId) return;
   setLoading(true, 'Deleting project…');
@@ -536,6 +562,14 @@ async function confirmDelete() {
   } catch (err) {
     setLoading(false);
     showToast('Error deleting: ' + err.message, 'error');
+  }
+}
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+async function handleLogout() {
+  if (confirm('Are you sure you want to logout?')) {
+    await sb.auth.signOut();
+    window.location.replace('login.html');
   }
 }
 
@@ -562,8 +596,26 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-loadProjects();
+// ── Init — session check FIRST, then load data ────────────────────────────────
+async function init() {
+  // 1. Check if user is logged in — redirect to login if not
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    window.location.replace('login.html');
+    return; // stop everything else
+  }
+
+  // 2. Show logged-in user email
+  const userStrip = document.getElementById('userStrip');
+  const userEmail = document.getElementById('userEmail');
+  userEmail.textContent = session.user.email;
+  userStrip.style.display = 'flex';
+
+  // 3. Load projects
+  await loadProjects();
+}
+
+init();
 </script>
 </body>
 </html>

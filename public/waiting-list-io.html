@@ -111,7 +111,7 @@
     <h1>Import / Export</h1>
     <p>Waiting List Data Management</p>
   </div>
-  <a class="back-pill" id="backBtn" href="waiting-list.html">← Waiting List</a>
+  <a class="back-pill" id="backBtn" href="waitinglist.html">← Waiting List</a>
 </div>
 
 <div class="scroll-body">
@@ -223,7 +223,7 @@ let _conflict   = 'skip';
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
   if (PROJECT_ID) {
-    document.getElementById('backBtn').href = `waiting-list.html?project=${PROJECT_ID}`;
+   document.getElementById('backBtn').href = `waitinglist.html?project=${PROJECT_ID}`;
   }
   await loadStats();
   document.getElementById('loadingScreen').style.display = 'none';

@@ -314,8 +314,7 @@ async function onSourceSelected(id) {
     .from('waiting_list')
     .select('*')
     .eq('project_id', id)
-    .order('registered_date', { ascending: true });
-
+    .order('position', { ascending: true });
   if (error) { showToast('Error loading workers: ' + error.message, 'error'); return; }
   _workers = data || [];
 
@@ -515,6 +514,18 @@ async function executeTransfer() {
     takenPhones = new Set((phoneRows || []).map(r => r.cellphone_number));
   }
 
+  // Get current max position in target project
+  const { data: maxPosRow } = await sb
+    .from('waiting_list')
+    .select('position')
+    .eq('project_id', _targetId)
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let nextPosition = (maxPosRow?.position || 0) + 1;
+  fresh.sort((a, b) => (a.position || 0) - (b.position || 0));
+
   // Build insert rows — null out phone if it already exists elsewhere
   const rows = fresh.map(w => ({
     omang_number:          w.omang_number,
@@ -532,6 +543,7 @@ async function executeTransfer() {
     total_days_worked:     w.total_days_worked  || 0,
     total_employments:     w.total_employments  || 0,
     project_id:            _targetId,
+    position:              nextPosition++,
   }));
 
   const { error } = await sb.from('waiting_list').insert(rows);

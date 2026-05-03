@@ -1,0 +1,101 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.groups (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_name text NOT NULL,
+  location text NOT NULL,
+  project text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  project_id uuid,
+  CONSTRAINT groups_pkey PRIMARY KEY (id),
+  CONSTRAINT groups_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
+);
+CREATE TABLE public.members (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid,
+  omang_number text NOT NULL,
+  surname text NOT NULL,
+  first_name text NOT NULL,
+  date_of_birth text NOT NULL,
+  cellphone_number text,
+  mobile_money_provider text NOT NULL DEFAULT 'smega'::text,
+  sex text NOT NULL DEFAULT 'M'::text,
+  qualification text NOT NULL DEFAULT 'PSLE'::text,
+  is_supervisor boolean DEFAULT false,
+  position text DEFAULT 'Worker'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT members_pkey PRIMARY KEY (id),
+  CONSTRAINT members_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id)
+);
+CREATE TABLE public.project_archive (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL,
+  project_name text NOT NULL,
+  month text,
+  year text,
+  description text,
+  group_id uuid NOT NULL,
+  group_name text NOT NULL,
+  location text,
+  member_id uuid NOT NULL,
+  omang_number text NOT NULL,
+  first_name text NOT NULL,
+  surname text NOT NULL,
+  date_of_birth text,
+  sex text,
+  cellphone_number text,
+  mobile_money_provider text,
+  qualification text,
+  is_supervisor boolean DEFAULT false,
+  position text,
+  archived_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT project_archive_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.projects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_name text NOT NULL,
+  month text NOT NULL,
+  year text NOT NULL,
+  description text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT projects_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.waiting_list (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  omang_number text NOT NULL UNIQUE,
+  surname text NOT NULL,
+  first_name text NOT NULL,
+  date_of_birth text NOT NULL,
+  village text NOT NULL,
+  cellphone_number text UNIQUE,
+  mobile_money_provider text NOT NULL DEFAULT 'smega'::text,
+  sex text NOT NULL DEFAULT 'M'::text,
+  qualification text NOT NULL DEFAULT 'PSLE'::text,
+  notes text,
+  is_returning_worker boolean DEFAULT false,
+  last_worked_date text,
+  total_days_worked integer DEFAULT 0,
+  total_employments integer DEFAULT 0,
+  registered_date timestamp with time zone DEFAULT now(),
+  project_id uuid,
+  CONSTRAINT waiting_list_pkey PRIMARY KEY (id),
+  CONSTRAINT waiting_list_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
+);
+CREATE TABLE public.worker_archive (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  omang_number text NOT NULL,
+  surname text NOT NULL,
+  first_name text NOT NULL,
+  date_of_birth text,
+  village text,
+  cellphone_number text,
+  mobile_money_provider text,
+  sex text,
+  qualification text,
+  last_worked_date text,
+  total_days_worked integer DEFAULT 0,
+  total_employments integer DEFAULT 0,
+  archived_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT worker_archive_pkey PRIMARY KEY (id)
+);
