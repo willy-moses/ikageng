@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:      #09100f;
+    --surface: #111a18;
+    --s2:      #18241f;
+    --border:  #1e2d28;
+    --accent:  #00c98a;
+    --gold:    #e8b84b;
+    --blue:    #4fc0d4;
+    --red:     #f06060;
+    --text:    #dff0eb;
+    --muted:   #6b8c84;
+    --green:   #2c5530;
+    --green2:  #34623a;
+    --green3:  #3d6f44;
+    --purple:  #9b6dff;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #1a0a3c 0%, #120830 50%, #0e1f1a 100%);
+    padding: 1.5rem 1.8rem; display: flex; align-items: center; gap: 1rem;
+    border-bottom: 1px solid rgba(155,109,255,.2);
+  }
+  .logo-circle {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple) 0%, #6b40e0 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 700;
+    color: #fff; flex-shrink: 0; border: 2px solid rgba(155,109,255,.35);
+  }
+  .header-text h1 { font-family: 'Fraunces', serif; font-size: clamp(1rem,4vw,1.3rem); font-weight: 700; color: #fff; }
+  .header-text p  { font-size: .62rem; color: rgba(155,109,255,.8); margin-top: .2rem; letter-spacing: .06em; }
+  .header-right { margin-left: auto; display: flex; gap: .6rem; align-items: center; }
+
+  .admin-pill {
+    background: rgba(155,109,255,.12); border: 1px solid rgba(155,109,255,.28);
+    color: var(--purple); font-size: .6rem; padding: .3rem .75rem; border-radius: 20px;
+    letter-spacing: .06em;
+  }
+  .logout-btn {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+    color: rgba(255,255,255,.8); font-family: 'DM Mono', monospace; font-size: .62rem;
+    padding: .38rem .85rem; border-radius: 20px; cursor: pointer; transition: background .15s;
+  }
+  .logout-btn:hover { background: rgba(255,255,255,.16); }
+
+  /* ── Body ── */
+  .body { padding: 1.5rem; max-width: 880px; margin: 0 auto; }
+
+  /* ── Stats row ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin-bottom: 1.6rem; }
+  @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem; text-align: center;
+  }
+  .stat-num { font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 700; line-height: 1; }
+  .stat-lbl { font-size: .58rem; color: var(--muted); margin-top: .3rem; letter-spacing: .12em; text-transform: uppercase; }
+  .stat-card.c-total  .stat-num { color: var(--accent); }
+  .stat-card.c-active .stat-num { color: var(--blue); }
+  .stat-card.c-susp   .stat-num { color: var(--gold); }
+  .stat-card.c-pend   .stat-num { color: var(--purple); }
+
+  /* ── Filters / search ── */
+  .toolbar {
+    display: flex; gap: .75rem; margin-bottom: 1.2rem; flex-wrap: wrap; align-items: center;
+  }
+  .search-input {
+    flex: 1; min-width: 180px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem 1rem; font-family: 'DM Mono', monospace;
+    font-size: .78rem; color: var(--text); outline: none; transition: border-color .2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .filter-pill {
+    padding: .4rem .9rem; border: 1px solid var(--border); border-radius: 20px;
+    background: var(--surface); font-family: 'DM Mono', monospace; font-size: .65rem;
+    color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .filter-pill:hover  { border-color: var(--accent); color: var(--accent); }
+  .filter-pill.active { background: var(--accent); border-color: var(--accent); color: #001a10; }
+
+  /* ── Ward cards ── */
+  .section-label { font-size: .58rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: .7rem; }
+
+  .ward-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    margin-bottom: .85rem; overflow: hidden; transition: border-color .2s;
+    animation: fadeIn .22s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);} }
+  .ward-card:hover { border-color: rgba(0,201,138,.3); }
+  .ward-card.suspended { border-color: rgba(232,184,75,.25); }
+  .ward-card.pending   { border-color: rgba(155,109,255,.25); }
+
+  .ward-main { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.2rem; }
+
+  .ward-avatar {
+    width: 52px; height: 52px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 700;
+    color: #fff; flex-shrink: 0; border: 1px solid rgba(0,201,138,.2);
+    text-transform: uppercase;
+  }
+  .ward-avatar.suspended { background: linear-gradient(135deg, #3a2c10 0%, #4a380e 100%); border-color: rgba(232,184,75,.3); }
+  .ward-avatar.pending   { background: linear-gradient(135deg, #1a0a3c 0%, #220d4e 100%); border-color: rgba(155,109,255,.3); }
+
+  .ward-info { flex: 1; min-width: 0; }
+  .ward-name { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .2rem; }
+  .ward-meta { font-size: .63rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .2rem; }
+  .ward-email { font-size: .65rem; color: var(--accent); }
+
+  .status-badge {
+    font-size: .55rem; padding: .18rem .5rem; border-radius: 4px;
+    letter-spacing: .08em; text-transform: uppercase; font-weight: 500;
+    background: rgba(0,201,138,.12); color: var(--accent); border: 1px solid rgba(0,201,138,.25);
+  }
+  .status-badge.suspended { background: rgba(232,184,75,.12); color: var(--gold); border-color: rgba(232,184,75,.25); }
+  .status-badge.pending   { background: rgba(155,109,255,.12); color: var(--purple); border-color: rgba(155,109,255,.25); }
+
+  .ward-stats { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; flex-shrink: 0; }
+  .ward-stat-num { font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .ward-stat-lbl { font-size: .55rem; color: var(--muted); text-align: right; letter-spacing: .08em; }
+
+  .ward-actions { display: flex; border-top: 1px solid var(--border); }
+  .w-action {
+    flex: 1; padding: .55rem; background: transparent; border: none;
+    font-family: 'DM Mono', monospace; font-size: .63rem; color: var(--muted);
+    cursor: pointer; transition: background .15s, color .15s;
+    display: flex; align-items: center; justify-content: center; gap: .35rem;
+    border-right: 1px solid var(--border);
+  }
+  .w-action:last-child { border-right: none; }
+  .w-action:hover         { background: var(--s2); color: var(--text); }
+  .w-action.view:hover    { color: var(--accent); }
+  .w-action.suspend:hover { background: rgba(232,184,75,.06); color: var(--gold); }
+  .w-action.restore:hover { background: rgba(0,201,138,.06); color: var(--accent); }
+  .w-action.danger:hover  { background: rgba(240,96,96,.06); color: var(--red); }
+
+  .empty-state { text-align: center; padding: 3rem; }
+  .empty-state h2 { font-family: 'Fraunces', serif; color: var(--accent); margin-bottom: .5rem; }
+  .empty-state p  { font-size: .72rem; color: var(--muted); }
+
+  /* ── Loading ── */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 200;
+    flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  }
+  .loading-overlay.open { display: flex; }
+  .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--purple); animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text-el { font-size: .78rem; color: var(--text); }
+
+  /* ── Modals ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.78); z-index: 50; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.8rem; width: min(460px,95vw); animation: slideUp .22s ease; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);} }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 700; text-align: center; margin-bottom: 1.2rem; }
+  .modal-title.warn   { color: var(--gold); }
+  .modal-title.danger { color: var(--red); }
+  .modal-body { font-size: .75rem; color: var(--muted); line-height: 1.8; margin-bottom: 1.2rem; }
+  .modal-body strong { color: var(--text); }
+  .modal-btns { display: flex; gap: .75rem; }
+  .btn-cancel  { flex:1; padding:.7rem; background:transparent; border:1px solid var(--border); border-radius:7px; cursor:pointer; color:var(--muted); font-family:'DM Mono',monospace; font-size:.75rem; transition:all .15s; }
+  .btn-cancel:hover  { border-color: var(--accent); color: var(--accent); }
+  .btn-confirm { flex:1; padding:.7rem; background:var(--gold); border:none; border-radius:7px; cursor:pointer; color:#1a1000; font-family:'DM Mono',monospace; font-size:.75rem; font-weight:500; transition:opacity .15s; }
+  .btn-confirm:hover { opacity:.85; }
+  .btn-confirm.danger { background: var(--red); color: #fff; }
+  .btn-confirm.accent { background: var(--accent); color: #001a10; }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--s2); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1.1rem; font-size: .72rem; color: var(--text); z-index: 999; animation: toastIn .2s ease; max-width: 300px; }
+  .toast.success { border-color: rgba(0,201,138,.4); color: var(--accent); }
+  .toast.error   { border-color: rgba(240,96,96,.4);  color: var(--red); }
+  .toast.warn    { border-color: rgba(232,184,75,.4);  color: var(--gold); }
+  @keyframes toastIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+
+  /* Ward detail pane */
+  .detail-section { margin-bottom: 1rem; }
+  .detail-row { display: flex; justify-content: space-between; padding: .5rem 0; border-bottom: 1px solid var(--border); font-size: .72rem; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key { color: var(--muted); }
+  .detail-val { color: var(--text); text-align: right; max-width: 60%; word-break: break-all; }
+  .detail-val.accent { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text-el" id="loadingText">Loading…</div>
+</div>
+
+<div class="header">
+  <div class="logo-circle">⭐</div>
+  <div class="header-text">
+    <h1>Admin Dashboard</h1>
+    <p>Super-Admin — All Wards Overview</p>
+  </div>
+  <div class="header-right">
+    <div class="admin-pill">SUPER ADMIN</div>
+    <button class="logout-btn" onclick="handleLogout()">🚪 Logout</button>
+  </div>
+</div>
+
+<div class="body">
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card c-total">
+      <div class="stat-num" id="statTotal">—</div>
+      <div class="stat-lbl">Total Wards</div>
+    </div>
+    <div class="stat-card c-active">
+      <div class="stat-num" id="statActive">—</div>
+      <div class="stat-lbl">Active</div>
+    </div>
+    <div class="stat-card c-susp">
+      <div class="stat-num" id="statSusp">—</div>
+      <div class="stat-lbl">Suspended</div>
+    </div>
+    <div class="stat-card c-pend">
+      <div class="stat-num" id="statPend">—</div>
+      <div class="stat-lbl">Pending</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search wards, locations, emails…" oninput="renderWards()">
+    <button class="filter-pill active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-pill" onclick="setFilter('active',this)">Active</button>
+    <button class="filter-pill" onclick="setFilter('suspended',this)">Suspended</button>
+    <button class="filter-pill" onclick="setFilter('pending',this)">Pending</button>
+  </div>
+
+  <div class="section-label" id="wardsLabel">Registered Wards</div>
+  <div id="wardsList"></div>
+
+</div>
+
+<!-- SUSPEND MODAL -->
+<div class="modal-overlay" id="suspendModal">
+  <div class="modal">
+    <div class="modal-title warn">⚠️ Suspend Ward?</div>
+    <div class="modal-body">
+      Are you sure you want to suspend <strong id="suspendName">—</strong>?<br><br>
+      Their officer account will still exist but they will see a suspended message when they try to use the system. You can restore them at any time.
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('suspendModal')">Cancel</button>
+      <button class="btn-confirm" onclick="confirmSuspend()">Suspend Ward</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESTORE MODAL -->
+<div class="modal-overlay" id="restoreModal">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--accent)">✅ Restore Ward?</div>
+    <div class="modal-body">
+      Restore access for <strong id="restoreName">—</strong>?<br><br>
+      Their officer will be able to log in and use the system again immediately.
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('restoreModal')">Cancel</button>
+      <button class="btn-confirm accent" onclick="confirmRestore()">Restore Access</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title danger">🗑️ Delete Ward Account?</div>
+    <div class="modal-body">
+      This will permanently delete <strong id="deleteName">—</strong> and all their data.<br><br>
+      <strong style="color:var(--red)">This cannot be undone.</strong> Projects, workers, waiting list, and archives for this ward will be lost.
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn-confirm danger" onclick="confirmDelete()">Delete Permanently</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-title" id="detailTitle">Ward Details</div>
+    <div class="detail-section" id="detailContent"></div>
+    <div class="modal-btns" style="margin-top:1rem">
+      <button class="btn-cancel" style="flex:none;width:100%" onclick="closeModal('detailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let _sessionToken = SUPA_KEY; // fallback to anon
+
+const hdrs = {
+  'Content-Type': 'application/json',
+  'apikey': SUPA_KEY,
+  'Authorization': `Bearer ${_sessionToken}`,
+  'Prefer': 'return=representation'
+};
+
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    headers: { ...hdrs, ...(opts.headers || {}) }, ...opts
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.message || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// ── State
+let wards = [];
+let wardProjectCounts = {};
+let wardWorkerCounts  = {};
+let activeFilter = 'all';
+let actionTarget = null; // { id, name, status }
+
+// ── Init
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.replace('login.html'); return; }
+
+  // ← USE SESSION TOKEN for all subsequent requests
+  _sessionToken = session.access_token;
+
+  // Rebuild headers with real token
+  hdrs.Authorization = `Bearer ${_sessionToken}`;
+
+  // Verify super-admin
+  const res = await fetch(
+    `${SUPA_URL}/rest/v1/super_admins?email=eq.${encodeURIComponent(session.user.email)}&select=id`,
+    { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${_sessionToken}` } }
+  );
+  const admins = await res.json().catch(() => []);
+  if (!admins || admins.length === 0) {
+    window.location.replace('index.html');
+    return;
+  }
+
+  await loadAll();
+}
+
+async function loadAll() {
+  setLoading(true, 'Loading ward data…');
+  try {
+    // Load wards
+    wards = await sbFetch('wards?order=created_at.desc&select=*') || [];
+
+    // Load project counts per ward
+    const projects = await sbFetch('projects?select=ward_id').catch(() => []);
+    wardProjectCounts = {};
+    (projects || []).forEach(p => {
+      if (p.ward_id) wardProjectCounts[p.ward_id] = (wardProjectCounts[p.ward_id] || 0) + 1;
+    });
+
+    // Load waiting list counts per ward
+    const wl = await sbFetch('waiting_list?select=ward_id').catch(() => []);
+    wardWorkerCounts = {};
+    (wl || []).forEach(w => {
+      if (w.ward_id) wardWorkerCounts[w.ward_id] = (wardWorkerCounts[w.ward_id] || 0) + 1;
+    });
+
+    updateStats();
+    renderWards();
+  } catch (err) {
+    showToast('Failed to load data: ' + err.message, 'error');
+  }
+  setLoading(false);
+}
+
+// ── Stats
+function updateStats() {
+  document.getElementById('statTotal').textContent  = wards.length;
+  document.getElementById('statActive').textContent = wards.filter(w => w.status === 'active').length;
+  document.getElementById('statSusp').textContent   = wards.filter(w => w.status === 'suspended').length;
+  document.getElementById('statPend').textContent   = wards.filter(w => w.status === 'pending').length;
+}
+
+// ── Filter
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderWards();
+}
+
+// ── Render
+function renderWards() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let list = wards;
+  if (activeFilter !== 'all') list = list.filter(w => w.status === activeFilter);
+  if (q) list = list.filter(w =>
+    (w.ward_name||'').toLowerCase().includes(q) ||
+    (w.location||'').toLowerCase().includes(q) ||
+    (w.contact_email||'').toLowerCase().includes(q) ||
+    (w.district||'').toLowerCase().includes(q)
+  );
+
+  document.getElementById('wardsLabel').textContent = `${list.length} Ward${list.length !== 1 ? 's' : ''} Found`;
+  const container = document.getElementById('wardsList');
+
+  if (!list.length) {
+    container.innerHTML = `<div class="empty-state"><h2>No Wards Found</h2><p>No wards match your current filter.</p></div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(w => {
+    const initials = (w.ward_name || '?').split(' ').map(x => x[0]).join('').substring(0, 2).toUpperCase();
+    const projects = wardProjectCounts[w.id] || 0;
+    const workers  = wardWorkerCounts[w.id] || 0;
+    const created  = new Date(w.created_at).toLocaleDateString('en-ZA');
+    const isActive = w.status === 'active';
+    const isSusp   = w.status === 'suspended';
+
+    return `
+    <div class="ward-card ${w.status}" id="wcard-${w.id}">
+      <div class="ward-main">
+        <div class="ward-avatar ${w.status}">${esc(initials)}</div>
+        <div class="ward-info">
+          <div class="ward-name">${esc(w.ward_name)}</div>
+          <div class="ward-meta">
+            📍 ${esc(w.location)}${w.district ? ' · ' + esc(w.district) : ''}
+            <span class="status-badge ${w.status}">${esc(w.status)}</span>
+          </div>
+          <div class="ward-email">${esc(w.contact_email)}</div>
+        </div>
+        <div class="ward-stats">
+          <div class="ward-stat-num">${projects}</div>
+          <div class="ward-stat-lbl">Projects</div>
+          <div style="margin-top:.3rem;font-size:.65rem;color:var(--muted)">${workers} workers</div>
+        </div>
+      </div>
+      <div class="ward-actions">
+        <button class="w-action view" onclick="viewWard('${w.id}')">🔍 View</button>
+        ${isActive
+          ? `<button class="w-action suspend" onclick="openSuspend('${w.id}','${esc(w.ward_name)}')">⏸ Suspend</button>`
+          : `<button class="w-action restore" onclick="openRestore('${w.id}','${esc(w.ward_name)}')">▶ Restore</button>`}
+        <button class="w-action" onclick="viewAsWard('${w.id}')">🔗 View Data</button>
+        <button class="w-action danger" onclick="openDelete('${w.id}','${esc(w.ward_name)}')">🗑️ Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── View detail
+function viewWard(id) {
+  const w = wards.find(x => x.id === id);
+  if (!w) return;
+  document.getElementById('detailTitle').textContent = w.ward_name;
+  document.getElementById('detailContent').innerHTML = `
+    <div class="detail-row"><span class="detail-key">Ward Name</span><span class="detail-val accent">${esc(w.ward_name)}</span></div>
+    <div class="detail-row"><span class="detail-key">Location</span><span class="detail-val">${esc(w.location)}</span></div>
+    <div class="detail-row"><span class="detail-key">District</span><span class="detail-val">${esc(w.district || '—')}</span></div>
+    <div class="detail-row"><span class="detail-key">Email</span><span class="detail-val">${esc(w.contact_email)}</span></div>
+    <div class="detail-row"><span class="detail-key">Phone</span><span class="detail-val">${esc(w.contact_phone || '—')}</span></div>
+    <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val" style="color:${w.status==='active'?'var(--accent)':w.status==='suspended'?'var(--gold)':'var(--purple)'}">${esc(w.status)}</span></div>
+    <div class="detail-row"><span class="detail-key">Projects</span><span class="detail-val accent">${wardProjectCounts[w.id]||0}</span></div>
+    <div class="detail-row"><span class="detail-key">Waiting List</span><span class="detail-val accent">${wardWorkerCounts[w.id]||0}</span></div>
+    <div class="detail-row"><span class="detail-key">Registered</span><span class="detail-val">${new Date(w.created_at).toLocaleDateString('en-ZA')}</span></div>
+    <div class="detail-row"><span class="detail-key">Ward ID</span><span class="detail-val" style="font-size:.6rem;color:var(--muted)">${esc(w.id)}</span></div>
+  `;
+  document.getElementById('detailModal').classList.add('open');
+}
+
+// View as ward — opens project management filtered to that ward
+function viewAsWard(wardId) {
+  window.open(`index.html?admin_ward=${wardId}`, '_blank');
+}
+
+// ── Suspend
+function openSuspend(id, name) {
+  actionTarget = { id, name };
+  document.getElementById('suspendName').textContent = name;
+  document.getElementById('suspendModal').classList.add('open');
+}
+async function confirmSuspend() {
+  if (!actionTarget) return;
+  closeModal('suspendModal');
+  await updateWardStatus(actionTarget.id, 'suspended');
+}
+
+// ── Restore
+function openRestore(id, name) {
+  actionTarget = { id, name };
+  document.getElementById('restoreName').textContent = name;
+  document.getElementById('restoreModal').classList.add('open');
+}
+async function confirmRestore() {
+  if (!actionTarget) return;
+  closeModal('restoreModal');
+  await updateWardStatus(actionTarget.id, 'active');
+}
+
+async function updateWardStatus(id, status) {
+  setLoading(true, status === 'suspended' ? 'Suspending ward…' : 'Restoring ward…');
+  try {
+    await sbFetch(`wards?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, updated_at: new Date().toISOString() })
+    });
+    const w = wards.find(x => x.id === id);
+    if (w) w.status = status;
+    updateStats();
+    renderWards();
+    showToast(status === 'suspended' ? `"${actionTarget?.name}" suspended` : `"${actionTarget?.name}" restored`, status === 'suspended' ? 'warn' : 'success');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+  setLoading(false);
+}
+
+// ── Delete
+function openDelete(id, name) {
+  actionTarget = { id, name };
+  document.getElementById('deleteName').textContent = name;
+  document.getElementById('deleteModal').classList.add('open');
+}
+async function confirmDelete() {
+  if (!actionTarget) return;
+  closeModal('deleteModal');
+  setLoading(true, 'Deleting ward…');
+  try {
+    await sbFetch(`wards?id=eq.${actionTarget.id}`, {
+      method: 'DELETE',
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    wards = wards.filter(w => w.id !== actionTarget.id);
+    updateStats();
+    renderWards();
+    showToast(`"${actionTarget.name}" deleted`, 'error');
+  } catch (err) {
+    showToast('Delete failed: ' + err.message, 'error');
+  }
+  setLoading(false);
+}
+
+// ── Helpers
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+function setLoading(on, text = 'Processing…') {
+  document.getElementById('loadingOverlay').classList.toggle('open', on);
+  document.getElementById('loadingText').textContent = text;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function handleLogout() {
+  if (confirm('Log out of admin panel?')) {
+    await sb.auth.signOut();
+    window.location.replace('login.html');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

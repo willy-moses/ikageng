@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Manage Users</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="ward-utils.js"></script>
+<style>
+  :root {
+    --bg:      #09100f;
+    --surface: #111a18;
+    --s2:      #18241f;
+    --border:  #1e2d28;
+    --accent:  #00c98a;
+    --gold:    #e8b84b;
+    --blue:    #4fc0d4;
+    --red:     #f06060;
+    --text:    #dff0eb;
+    --muted:   #6b8c84;
+    --green:   #2c5530;
+    --green2:  #34623a;
+    --green3:  #3d6f44;
+    --purple:  #9b6dff;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 60%, var(--green3) 100%);
+    padding: 2rem 1.5rem 1.8rem;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .logo-circle {
+    width: 58px; height: 58px; border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 700;
+    color: #fff; flex-shrink: 0; border: 2px solid rgba(255,255,255,.25);
+  }
+  .header-text h1 { font-family: 'Fraunces', serif; font-size: clamp(1.1rem,4vw,1.45rem); font-weight: 700; color: #fff; line-height: 1.2; }
+  .header-text p  { font-size: .7rem; color: rgba(255,255,255,.85); margin-top: .25rem; letter-spacing: .04em; }
+  .header-right { margin-left: auto; display: flex; gap: .5rem; flex-shrink: 0; align-items: center; }
+
+  .back-btn, .logout-header-btn {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+    color: #fff; font-family: 'DM Mono', monospace; font-size: .65rem;
+    padding: .4rem .9rem; border-radius: 20px; cursor: pointer;
+    transition: background .15s; letter-spacing: .06em;
+  }
+  .back-btn:hover, .logout-header-btn:hover { background: rgba(255,255,255,.22); }
+
+  .scroll-body { padding: 1.5rem; max-width: 720px; margin: 0 auto; width: 100%; }
+
+  /* Info strip */
+  .info-strip {
+    background: rgba(0,201,138,.05); border: 1px solid rgba(0,201,138,.15);
+    border-radius: 8px; padding: .7rem 1rem; margin-bottom: 1.2rem;
+    font-size: .68rem; color: var(--muted); line-height: 1.6;
+  }
+  .info-strip strong { color: var(--accent); }
+
+  /* Add user button */
+  .add-btn {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 100%);
+    border: 1px solid rgba(0,201,138,.3); border-radius: 12px;
+    padding: 1rem 1.5rem; display: flex; align-items: center;
+    justify-content: center; gap: .8rem; cursor: pointer; width: 100%;
+    margin-bottom: 1.5rem; font-family: 'DM Mono', monospace; color: #fff;
+    font-size: .88rem; font-weight: 500; letter-spacing: .05em;
+    transition: opacity .2s, transform .1s; text-transform: uppercase;
+    box-shadow: 0 4px 20px rgba(0,201,138,.12);
+  }
+  .add-btn:hover  { opacity: .88; transform: translateY(-1px); }
+  .add-btn:active { transform: scale(.98); }
+
+  /* Role legend */
+  .role-legend {
+    display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.3rem;
+  }
+  .role-pill {
+    font-size: .6rem; padding: .28rem .65rem; border-radius: 20px;
+    letter-spacing: .08em; text-transform: uppercase; font-weight: 500;
+  }
+  .role-pill.admin   { background: rgba(155,109,255,.12); color: var(--purple); border: 1px solid rgba(155,109,255,.25); }
+  .role-pill.officer { background: rgba(0,201,138,.12);   color: var(--accent); border: 1px solid rgba(0,201,138,.25); }
+  .role-pill.viewer  { background: rgba(79,192,212,.12);  color: var(--blue);   border: 1px solid rgba(79,192,212,.25); }
+
+  /* Section label */
+  .section-label { font-size: .58rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: .7rem; }
+
+  /* User card */
+  .user-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: .85rem; overflow: hidden;
+    transition: border-color .2s; animation: fadeIn .25s ease;
+  }
+  .user-card:hover { border-color: rgba(0,201,138,.3); }
+  .user-card.is-self { border-color: rgba(0,201,138,.5); }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);} }
+
+  .user-main { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.2rem; }
+
+  .user-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 700;
+    color: #fff; flex-shrink: 0; text-transform: uppercase;
+  }
+  .user-avatar.admin   { background: linear-gradient(135deg, #3d1fa0 0%, #5c2fd4 100%); border: 2px solid rgba(155,109,255,.3); }
+  .user-avatar.officer { background: linear-gradient(135deg, var(--green) 0%, var(--green2) 100%); border: 2px solid rgba(0,201,138,.25); }
+  .user-avatar.viewer  { background: linear-gradient(135deg, #0c3040 0%, #164f6a 100%); border: 2px solid rgba(79,192,212,.25); }
+
+  .user-info { flex: 1; min-width: 0; }
+  .user-name  { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-email { font-size: .65rem; color: var(--accent); margin-bottom: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-meta  { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+
+  .badge-self { font-size: .55rem; background: rgba(0,201,138,.12); border: 1px solid rgba(0,201,138,.3); color: var(--accent); border-radius: 4px; padding: .15rem .45rem; }
+
+  .user-actions { display: flex; border-top: 1px solid var(--border); }
+  .u-action {
+    flex: 1; padding: .6rem; background: transparent; border: none;
+    font-family: 'DM Mono', monospace; font-size: .63rem; color: var(--muted);
+    cursor: pointer; transition: background .15s, color .15s;
+    display: flex; align-items: center; justify-content: center; gap: .4rem;
+    border-right: 1px solid var(--border); letter-spacing: .04em;
+  }
+  .u-action:last-child { border-right: none; }
+  .u-action:hover        { background: var(--s2); color: var(--text); }
+  .u-action.danger:hover { background: rgba(240,96,96,.08); color: var(--red); }
+  .u-action:disabled     { opacity: .3; cursor: not-allowed; }
+
+  .empty-state { text-align: center; padding: 3rem 2rem; }
+  .empty-icon  { font-size: 3rem; margin-bottom: .6rem; }
+  .empty-state h2 { font-family: 'Fraunces', serif; font-size: 1.2rem; color: var(--accent); margin-bottom: .4rem; }
+  .empty-state p  { font-size: .75rem; color: var(--muted); line-height: 1.7; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--s2); border: 1px solid var(--border);
+    border-radius: 8px; padding: .75rem 1.1rem; font-size: .72rem; color: var(--text);
+    z-index: 999; animation: toastIn .2s ease; max-width: 300px; line-height: 1.5;
+  }
+  .toast.success { border-color: rgba(0,201,138,.4); color: var(--accent); }
+  .toast.error   { border-color: rgba(240,96,96,.4);  color: var(--red); }
+  .toast.info    { border-color: rgba(79,192,212,.4);  color: var(--blue); }
+  @keyframes toastIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+
+  /* Modals */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.78); z-index: 50;
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.8rem;
+    width: min(480px,95vw); max-height: 88vh; overflow-y: auto;
+    animation: slideUp .22s ease;
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 700; color: var(--accent); text-align: center; margin-bottom: 1.4rem; }
+  .modal-title.danger { color: var(--red); }
+
+  .form-group { display: flex; flex-direction: column; gap: .32rem; margin-bottom: .95rem; }
+  .form-group label { font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  input[type="text"], input[type="email"], input[type="password"], select {
+    background: var(--s2); border: 1px solid var(--border); color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: .8rem; padding: .6rem .9rem;
+    border-radius: 7px; outline: none; width: 100%; transition: border-color .2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--s2); }
+
+  .role-desc {
+    font-size: .65rem; color: var(--muted); margin-top: .35rem; line-height: 1.5;
+    background: var(--s2); border: 1px solid var(--border); border-radius: 6px; padding: .5rem .75rem;
+  }
+
+  .modal-btns { display: flex; gap: .75rem; margin-top: 1.4rem; }
+  .modal-cancel {
+    flex: 1; padding: .7rem; background: transparent;
+    border: 1px solid var(--border); border-radius: 7px;
+    cursor: pointer; color: var(--muted); font-family: 'DM Mono', monospace;
+    font-size: .75rem; transition: all .15s;
+  }
+  .modal-cancel:hover { border-color: var(--accent); color: var(--accent); }
+  .modal-confirm {
+    flex: 1; padding: .7rem; background: var(--accent); border: none;
+    border-radius: 7px; cursor: pointer; color: #001a10;
+    font-family: 'DM Mono', monospace; font-size: .75rem; font-weight: 500;
+    transition: opacity .15s;
+  }
+  .modal-confirm:hover    { opacity: .85; }
+  .modal-confirm:disabled { opacity: .4; cursor: not-allowed; }
+  .modal-confirm.danger   { background: var(--red); color: #fff; }
+
+  .hint-box {
+    background: rgba(232,184,75,.06); border: 1px solid rgba(232,184,75,.2);
+    border-radius: 7px; padding: .65rem .85rem; font-size: .65rem; color: var(--gold); line-height: 1.6; margin-top: .5rem;
+  }
+
+  /* Loading */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); z-index: 200;
+    flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  }
+  .loading-overlay.open { display: flex; }
+  .spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text-el { font-size: .8rem; color: var(--text); letter-spacing: .1em; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text-el" id="loadingText">Loading…</div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo-circle">IK</div>
+  <div class="header-text">
+    <h1>Manage Users</h1>
+    <p>Ward Sub-User Accounts</p>
+  </div>
+  <div class="header-right">
+    <button class="back-btn" onclick="history.back()">← Back</button>
+    <button class="logout-header-btn" onclick="handleLogout()">🚪 Logout</button>
+  </div>
+</div>
+
+<div class="scroll-body">
+
+  <div class="info-strip">
+    Add users who can access your ward's data. Assign them a <strong>role</strong> to control what they can do.
+    <br>Each user will need a Supabase auth account — after adding them here, they can log in at <strong>login.html</strong> with their email &amp; password.
+  </div>
+
+  <!-- Role legend -->
+  <div class="role-legend">
+    <span class="role-pill admin">⭐ Admin — full access</span>
+    <span class="role-pill officer">✏️ Officer — add &amp; edit data</span>
+    <span class="role-pill viewer">👁 Viewer — read only</span>
+  </div>
+
+  <button class="add-btn" onclick="openAddModal()">
+    <span style="font-size:1.2rem">➕</span> Add New User
+  </button>
+
+  <div class="section-label" id="usersLabel">Ward Users</div>
+  <div id="usersList"></div>
+
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">Add Ward User</div>
+
+    <div class="form-group">
+      <label>Full Name *</label>
+      <input type="text" id="a-name" placeholder="e.g. Keabetswe Moyo">
+    </div>
+    <div class="form-group">
+      <label>Email Address *</label>
+      <input type="email" id="a-email" placeholder="e.g. keabetswe@example.com">
+    </div>
+    <div class="form-group">
+      <label>Temporary Password *</label>
+      <input type="text" id="a-password" placeholder="Set a temporary password for them">
+      <div style="font-size:.6rem;color:var(--muted);margin-top:.25rem">Min 8 characters. They can change it after logging in.</div>
+    </div>
+    <div class="form-group">
+      <label>Role *</label>
+      <select id="a-role" onchange="updateRoleDesc()">
+        <option value="officer">Officer — can add &amp; edit data</option>
+        <option value="admin">Admin — full access (same as you)</option>
+        <option value="viewer">Viewer — read only, no changes</option>
+      </select>
+      <div class="role-desc" id="roleDesc">Can add members, create groups, manage waiting list, and update project data.</div>
+    </div>
+
+    <div class="hint-box">
+      ⚠️ This creates a real Supabase auth account for the user. They will be able to log in immediately with the email &amp; password you set.
+    </div>
+
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('addModal')">Cancel</button>
+      <button class="modal-confirm" id="addConfirmBtn" onclick="addUser()">Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ROLE MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">Edit User Role</div>
+
+    <div class="form-group">
+      <label>User</label>
+      <input type="text" id="e-name" disabled style="opacity:.6">
+    </div>
+    <div class="form-group">
+      <label>Role *</label>
+      <select id="e-role" onchange="updateEditRoleDesc()">
+        <option value="officer">Officer — can add &amp; edit data</option>
+        <option value="admin">Admin — full access</option>
+        <option value="viewer">Viewer — read only</option>
+      </select>
+      <div class="role-desc" id="editRoleDesc"></div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('editModal')">Cancel</button>
+      <button class="modal-confirm" onclick="confirmEditRole()">Save Role</button>
+    </div>
+  </div>
+</div>
+
+<!-- REMOVE MODAL -->
+<div class="modal-overlay" id="removeModal">
+  <div class="modal">
+    <div class="modal-title danger">Remove User?</div>
+    <p style="font-size:.78rem;color:var(--muted);line-height:1.7;margin-bottom:.5rem">
+      This will remove <strong id="removeName" style="color:var(--text)">—</strong> from your ward.
+      Their Supabase auth account will still exist but they will no longer be able to log in to this ward.
+    </p>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('removeModal')">Cancel</button>
+      <button class="modal-confirm danger" onclick="confirmRemove()">Remove User</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Supabase setup ─────────────────────────────────────────────────────────
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let hdrs = {
+  'Content-Type':  'application/json',
+  'apikey':        SUPA_KEY,
+  'Authorization': `Bearer ${SUPA_KEY}`,
+  'Prefer':        'return=representation'
+};
+
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    headers: { ...hdrs, ...(opts.headers || {}) }, ...opts
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.message || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let wardUsers      = [];
+let currentWardId  = null;
+let currentUserEmail = null;
+let editTargetId   = null;
+let removeTargetId = null;
+let removeTargetName = '';
+let accessToken    = null;
+
+const ROLE_DESCS = {
+  admin:   'Full access — same permissions as the main ward officer. Can add/edit/delete everything.',
+  officer: 'Can add members, create groups, manage waiting list, and update project data.',
+  viewer:  'Read-only access. Can view all data but cannot make any changes.'
+};
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  await wardUtils.init(sb);
+  wardUtils.onReady(async (wardId, isAdmin) => {
+    currentWardId = wardId;
+
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      currentUserEmail = session.user.email;
+      accessToken = session.access_token;
+      hdrs.Authorization = `Bearer ${accessToken}`;
+    }
+
+    await loadUsers();
+  });
+}
+
+// ── Load ward_users ────────────────────────────────────────────────────────
+async function loadUsers() {
+  setLoading(true, 'Loading users…');
+  try {
+    const data = await sbFetch(`ward_users?ward_id=eq.${currentWardId}&order=created_at.asc&select=*`);
+    wardUsers = data || [];
+    renderUsers();
+  } catch (err) {
+    showToast('Failed to load users: ' + err.message, 'error');
+    wardUsers = [];
+    renderUsers();
+  }
+  setLoading(false);
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderUsers() {
+  const container = document.getElementById('usersList');
+  const label     = document.getElementById('usersLabel');
+  label.textContent = `${wardUsers.length} User${wardUsers.length !== 1 ? 's' : ''} in This Ward`;
+
+  if (!wardUsers.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h2>No Sub-Users Yet</h2>
+        <p>Add users to give them access to this ward's data. Each user gets their own login and role.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = wardUsers.map(u => {
+    const initials = (u.full_name || u.email || '?').split(' ').map(x => x[0]).join('').substring(0,2).toUpperCase();
+    const isSelf   = u.email === currentUserEmail;
+    const created  = new Date(u.created_at).toLocaleDateString('en-ZA');
+
+    return `
+    <div class="user-card${isSelf ? ' is-self' : ''}" id="ucard-${u.id}">
+      <div class="user-main">
+        <div class="user-avatar ${u.role}">${esc(initials)}</div>
+        <div class="user-info">
+          <div class="user-name">${esc(u.full_name || '(No name)')}</div>
+          <div class="user-email">${esc(u.email)}</div>
+          <div class="user-meta">
+            <span class="role-pill ${u.role}">${roleLabel(u.role)}</span>
+            ${isSelf ? '<span class="badge-self">YOU</span>' : ''}
+            <span style="font-size:.6rem;color:var(--muted)">Added ${created}</span>
+          </div>
+        </div>
+      </div>
+      <div class="user-actions">
+        <button class="u-action" onclick="openEditModal('${u.id}')" ${isSelf ? 'disabled title="Cannot edit your own role"' : ''}>✏️ Change Role</button>
+        <button class="u-action danger" onclick="openRemoveModal('${u.id}','${esc(u.full_name || u.email)}')" ${isSelf ? 'disabled title="Cannot remove yourself"' : ''}>🗑️ Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function roleLabel(role) {
+  return { admin: '⭐ Admin', officer: '✏️ Officer', viewer: '👁 Viewer' }[role] || role;
+}
+
+// ── Add User ───────────────────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('a-name').value     = '';
+  document.getElementById('a-email').value    = '';
+  document.getElementById('a-password').value = '';
+  document.getElementById('a-role').value     = 'officer';
+  updateRoleDesc();
+  document.getElementById('addModal').classList.add('open');
+}
+
+function updateRoleDesc() {
+  const role = document.getElementById('a-role').value;
+  document.getElementById('roleDesc').textContent = ROLE_DESCS[role] || '';
+}
+
+async function addUser() {
+  const name  = document.getElementById('a-name').value.trim();
+  const email = document.getElementById('a-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('a-password').value.trim();
+  const role  = document.getElementById('a-role').value;
+
+  if (!name)  { showToast('Please enter a full name', 'error'); return; }
+  if (!email) { showToast('Please enter an email address', 'error'); return; }
+  if (!pass || pass.length < 8) { showToast('Password must be at least 8 characters', 'error'); return; }
+
+  // Check for duplicate in ward_users
+  const dup = wardUsers.find(u => u.email === email);
+  if (dup) { showToast('This email is already added to your ward', 'error'); return; }
+
+  const btn = document.getElementById('addConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+
+  try {
+    // Step 1: Create Supabase auth user via admin API (requires service role — fallback to sign-up)
+    // Since we only have anon key, we use signUp with email confirmation disabled
+    const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
+      email,
+      password: pass,
+      options: { data: { full_name: name } }
+    });
+
+    if (signUpErr) throw new Error(signUpErr.message);
+
+    const newUserId = signUpData?.user?.id;
+    if (!newUserId) throw new Error('Could not create auth user. The email may already be registered.');
+
+    // Step 2: Insert into ward_users
+    const result = await sbFetch('ward_users', {
+      method: 'POST',
+      body: JSON.stringify({
+        ward_id:      currentWardId,
+        auth_user_id: newUserId,
+        email:        email,
+        full_name:    name,
+        role:         role
+      })
+    });
+
+    if (result && result.length) wardUsers.push(result[0]);
+
+    closeModal('addModal');
+    renderUsers();
+    showToast(`${name} added as ${role} ✓`, 'success');
+
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Add User';
+}
+
+// ── Edit Role ──────────────────────────────────────────────────────────────
+function openEditModal(id) {
+  const u = wardUsers.find(x => x.id === id);
+  if (!u) return;
+  editTargetId = id;
+  document.getElementById('e-name').value = u.full_name || u.email;
+  document.getElementById('e-role').value = u.role;
+  updateEditRoleDesc();
+  document.getElementById('editModal').classList.add('open');
+}
+
+function updateEditRoleDesc() {
+  const role = document.getElementById('e-role').value;
+  document.getElementById('editRoleDesc').textContent = ROLE_DESCS[role] || '';
+}
+
+async function confirmEditRole() {
+  if (!editTargetId) return;
+  const role = document.getElementById('e-role').value;
+
+  setLoading(true, 'Updating role…');
+  closeModal('editModal');
+
+  try {
+    await sbFetch(`ward_users?id=eq.${editTargetId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role })
+    });
+    const u = wardUsers.find(x => x.id === editTargetId);
+    if (u) u.role = role;
+    renderUsers();
+    showToast('Role updated ✓', 'success');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+  setLoading(false);
+}
+
+// ── Remove User ────────────────────────────────────────────────────────────
+function openRemoveModal(id, name) {
+  removeTargetId   = id;
+  removeTargetName = name;
+  document.getElementById('removeName').textContent = name;
+  document.getElementById('removeModal').classList.add('open');
+}
+
+async function confirmRemove() {
+  if (!removeTargetId) return;
+  setLoading(true, 'Removing user…');
+  closeModal('removeModal');
+
+  try {
+    await sbFetch(`ward_users?id=eq.${removeTargetId}`, {
+      method:  'DELETE',
+      headers: { 'Prefer': 'return=minimal' }
+    });
+    wardUsers = wardUsers.filter(u => u.id !== removeTargetId);
+    removeTargetId = null;
+    renderUsers();
+    showToast(`${removeTargetName} removed`, 'info');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+  setLoading(false);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+function setLoading(on, text = 'Processing…') {
+  document.getElementById('loadingOverlay').classList.toggle('open', on);
+  document.getElementById('loadingText').textContent = text;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function handleLogout() {
+  if (confirm('Are you sure you want to logout?')) {
+    await sb.auth.signOut();
+    window.location.replace('login.html');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

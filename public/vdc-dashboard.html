@@ -292,7 +292,26 @@
       <div class="btn-arrow">›</div>
     </a>
 
+
+    <!-- AI Search button — ADD THIS -->
+    <a class="menu-btn highlight" id="btn-aisearch" href="ai-search.html">
+      <div class="menu-icon" style="background:rgba(232,184,75,.1);border:1px solid rgba(232,184,75,.2);">🤖</div>
+      <div class="btn-content">
+        <div class="btn-title">Universal AI Search <span class="badge" style="background:rgba(232,184,75,.15);color:var(--gold);border-color:rgba(232,184,75,.3);">AI</span></div>
+        <div class="btn-desc">Natural language search across all workers, archives &amp; projects</div>
+      </div>
+      <div class="btn-arrow">›</div>
+    </a>
+
     <div class="section-label">System</div>
+    <button class="menu-btn" onclick="window.location.href='ward-users.html'">
+  <div class="menu-icon icon-muted">👥</div>
+  <div class="btn-content">
+    <div class="btn-title">Manage Users</div>
+    <div class="btn-desc">Add or remove ward sub-users and assign roles</div>
+  </div>
+  <div class="btn-arrow">›</div>
+</button>
     <button class="menu-btn" onclick="goTo('settings')">
       <div class="menu-icon icon-muted">🔧</div>
       <div class="btn-content">
@@ -510,6 +529,7 @@ async function loadProjectInfo() {
   document.getElementById('btn-manage').href        = `manage-groups.html${param}`;
   document.getElementById('btn-data').href          = `data-manager.html${param}`;
   document.getElementById('btn-archive').href       = `archive.html${param}`;
+  document.getElementById('btn-aisearch').href = `ai-search.html${param}`;
   document.getElementById('rpt-waiting-link').href  = `waitinglist.html${param}`;
   document.getElementById('rpt-manage-link').href   = `manage-groups.html${param}`;
   document.getElementById('cfg-waiting-link').href  = `waitinglist.html${param}`;

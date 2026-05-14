@@ -214,6 +214,7 @@
               font-weight:500;text-decoration:none;white-space:nowrap;">
       📍 Sites
     </a>
+
     <a id="transferBtn" href="transfer-workers.html"
        style="flex-shrink:0;display:inline-flex;align-items:center;gap:.35rem;
               padding:.9rem 1.1rem;background:rgba(0,201,138,.07);
@@ -222,6 +223,15 @@
               font-weight:500;text-decoration:none;white-space:nowrap;">
       🔀 Transfer
     </a>
+    <a id="auditBtn" href="audit-log.html"
+   style="flex-shrink:0;display:inline-flex;align-items:center;gap:.35rem;
+          padding:.9rem 1.1rem;background:rgba(240,96,96,.07);
+          border:1px dashed rgba(240,96,96,.4);border-radius:10px;
+          color:var(--red);font-family:'DM Mono',monospace;font-size:.78rem;
+          font-weight:500;text-decoration:none;white-space:nowrap;
+          transition:all .2s;">
+  📋 Audit
+</a>
   </div>
 
   <div class="section-label" id="listLabel">Workers</div>
@@ -319,6 +329,18 @@ const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
 let _list = [], _filter = 'all', _afCache = null, _omangTimer = null;
 let _projectName = null;
 let _editId = null;
+async function getCurrentUser() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return 'Unknown';
+
+  const { data: profile } = await sb
+    .from('profiles')
+    .select('display_name')
+    .eq('id', session.user.id)
+    .maybeSingle();
+
+  return profile?.display_name || session.user.email.split('@')[0];
+}
 let _projectMonth = null;
 let _projectYear  = null;
 
@@ -327,11 +349,12 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
 
 // ── Audit Log ─────────────────────────────────────────────────────────────
 async function logAudit(action, omang, name, details = {}) {
+  const performedBy = await getCurrentUser();
   await sb.from('worker_audit_log').insert({
     action,
     worker_omang: omang,
     worker_name:  name,
-    performed_by: 'User',
+    performed_by: performedBy,   // ← was hardcoded 'User'
     details,
     project_id:   PROJECT_ID || null,
   });
@@ -580,9 +603,13 @@ async function checkAutofill(omang){
   errEl.textContent = '';
   document.getElementById('autofillBox').style.display = 'none';
 
-  const { data: existing } = await sb
+  // Scoped duplicate check — only checks current project
+  let dupQuery = sb
     .from('waiting_list').select('id,first_name,surname')
-    .eq('omang_number', omang).maybeSingle();
+    .eq('omang_number', omang);
+  if (PROJECT_ID) dupQuery = dupQuery.eq('project_id', PROJECT_ID);
+
+  const { data: existing } = await dupQuery.maybeSingle();
   if (existing){
     hint.textContent  = '⚠ Already in waiting list';
     hint.className    = 'omang-hint invalid';
@@ -601,10 +628,42 @@ async function checkAutofill(omang){
     .eq('omang_number', omang).order('archived_at', { ascending: false }).limit(1);
   const fromProjArch = projArchRows && projArchRows[0];
 
+  // Count distinct projects this worker has been employed in
+  const { data: empRows } = await sb
+    .from('project_archive')
+    .select('project_id')
+    .eq('omang_number', omang);
+
+  const totalEmployments = empRows
+    ? new Set(empRows.map(r => r.project_id)).size
+    : 0;
+
   if (fromArchive || fromProjArch) {
+    // Compare dates across both sources — use whichever is more recent
+    const archiveDate  = fromArchive  && fromArchive.last_worked_date  ? new Date(fromArchive.last_worked_date)  : null;
+    const projArchDate = fromProjArch && fromProjArch.last_worked_date ? new Date(fromProjArch.last_worked_date) : null;
+
+    let lastWorked = null;
+    let dominantSource;
+    if (archiveDate && projArchDate) {
+      if (projArchDate > archiveDate) {
+        lastWorked = fromProjArch.last_worked_date;
+        dominantSource = 'project_archive';
+      } else {
+        lastWorked = fromArchive.last_worked_date;
+        dominantSource = 'worker_archive';
+      }
+    } else if (archiveDate) {
+      lastWorked = fromArchive.last_worked_date;
+      dominantSource = 'worker_archive';
+    } else if (projArchDate) {
+      lastWorked = fromProjArch.last_worked_date;
+      dominantSource = 'project_archive';
+    } else {
+      dominantSource = fromArchive ? 'worker_archive' : 'project_archive';
+    }
+
     const base = fromArchive || fromProjArch;
-    const lastWorked = (fromArchive && fromArchive.last_worked_date)
-      || (fromProjArch && fromProjArch.last_worked_date) || null;
     _afCache = {
       omang_number: omang, surname: base.surname||'', first_name: base.first_name||'',
       date_of_birth: base.date_of_birth||'', village: base.village||'',
@@ -612,17 +671,17 @@ async function checkAutofill(omang){
       sex: base.sex||'M', qualification: base.qualification||'PSLE',
       last_worked_date: lastWorked,
       total_days_worked: (fromArchive && fromArchive.total_days_worked)||0,
-      total_employments: (fromArchive && fromArchive.total_employments)||0,
-      _source: fromArchive ? 'worker_archive' : 'project_archive',
+      total_employments: totalEmployments,
+      _source: dominantSource,
     };
     fillForm(_afCache);
-    hint.textContent = _afCache._source === 'worker_archive'
+    hint.textContent = dominantSource === 'worker_archive'
       ? '↩ Found in worker archive — fields filled'
       : '↩ Found in project history — fields filled';
     hint.className = 'omang-hint valid';
     const lastW = lastWorked ? new Date(lastWorked).toLocaleDateString('en-ZA') : 'No record';
     document.getElementById('autofillText').innerHTML =
-      `<b>${_afCache.first_name} ${_afCache.surname}</b> · Last worked: <b>${lastW}</b> · Employments: <b>${_afCache.total_employments}</b>`;
+      `<b>${_afCache.first_name} ${_afCache.surname}</b> · Last worked: <b>${lastW}</b> · Employments: <b>${totalEmployments}</b>`;
     document.getElementById('autofillBox').style.display = 'block';
     showToast(`${_afCache.first_name} ${_afCache.surname} — info loaded from archive ✓`, 'info');
   } else {
@@ -644,6 +703,7 @@ function fillForm(w){
 }
 
 // ── Save (insert or update) ────────────────────────────────────────────────
+// ── Save (insert or update) ────────────────────────────────────────────────
 async function saveWorker(){
   const surname = document.getElementById('f-surname').value.trim();
   const first   = document.getElementById('f-first').value.trim();
@@ -661,6 +721,23 @@ async function saveWorker(){
   btn.disabled = true; btn.textContent = 'Saving…';
 
   if (_editId) {
+    // Phone uniqueness check for edit — exclude current record
+    if (phone) {
+      const editedWorker = _list.find(x => x.id === _editId);
+      const { data: phoneExists } = await sb
+        .from('waiting_list')
+        .select('id, first_name, surname')
+        .eq('cellphone_number', phone)
+        .neq('omang_number', editedWorker?.omang_number || '')
+        .maybeSingle();
+
+      if (phoneExists) {
+        errEl.textContent = `Phone already registered to ${phoneExists.first_name} ${phoneExists.surname}.`;
+        btn.disabled = false; btn.textContent = 'Save Changes';
+        return;
+      }
+    }
+
     const payload = {
       surname, first_name: first, date_of_birth: dob, village,
       cellphone_number: phone || null, sex: getChip('sex'),
@@ -674,9 +751,27 @@ async function saveWorker(){
     await logAudit('updated', edited?.omang_number || '—', `${first} ${surname}`, { fields_edited: Object.keys(payload) });
     closeModal();
     showToast(`${first} ${surname} updated ✓`, 'success');
+
   } else {
     const omang = rawOmang(document.getElementById('f-omang').value);
     if (!validOmang(omang)) { errEl.textContent = 'Omang number must be exactly 9 digits.'; btn.disabled = false; btn.textContent = 'Add to List'; return; }
+
+    // Final phone uniqueness guard for add
+    if (phone) {
+      const { data: phoneExists } = await sb
+        .from('waiting_list')
+        .select('id, first_name, surname')
+        .eq('cellphone_number', phone)
+        .neq('omang_number', omang)
+        .maybeSingle();
+
+      if (phoneExists) {
+        errEl.textContent = `Phone already registered to ${phoneExists.first_name} ${phoneExists.surname}.`;
+        btn.disabled = false; btn.textContent = 'Add to List';
+        return;
+      }
+    }
+
     const af = _afCache || {};
     const { data: maxPosRow } = await sb
       .from('waiting_list')
@@ -706,6 +801,38 @@ async function saveWorker(){
 
   await loadList();
 }
+
+// ── Phone blur check ───────────────────────────────────────────────────────
+document.getElementById('f-phone').addEventListener('blur', async function(){
+  const phone = this.value.trim();
+  const omang = rawOmang(document.getElementById('f-omang').value);
+  const errEl = document.getElementById('formErr');
+  if (!phone) return;
+
+  // In edit mode, use the locked omang instead
+  let currentOmang = omang;
+  if (_editId) {
+    const editedWorker = _list.find(x => x.id === _editId);
+    currentOmang = editedWorker?.omang_number || '';
+  }
+
+  if (!currentOmang) return;
+
+  const { data: phoneExists } = await sb
+    .from('waiting_list')
+    .select('id, first_name, surname')
+    .eq('cellphone_number', phone)
+    .neq('omang_number', currentOmang)
+    .maybeSingle();
+
+  if (phoneExists) {
+    document.getElementById('f-phone').style.borderColor = 'var(--red)';
+    errEl.textContent = `Phone already registered to ${phoneExists.first_name} ${phoneExists.surname}.`;
+  } else {
+    document.getElementById('f-phone').style.borderColor = '';
+    errEl.textContent = '';
+  }
+});
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 function showToast(msg, type = 'success'){

@@ -6,6 +6,7 @@
 <title>Ikageng — Special Workers</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="ward-utils.js"></script>
 <style>
   :root {
     --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
@@ -320,15 +321,20 @@ function calcAge(dob){ if(!dob)return'?';const b=new Date(dob),t=new Date();let 
 
 // ── Init ────────────────────────────────────────────────────────────────────
 async function init(){
-  await loadList();
-  document.getElementById('loadingScreen').style.display = 'none';
+  await wardUtils.init(sb);
+  wardUtils.onReady(async () => {
+    await loadList();
+    document.getElementById('loadingScreen').style.display = 'none';
+  });
 }
+
 
 // ── Load ────────────────────────────────────────────────────────────────────
 async function loadList(){
   const { data, error } = await sb
     .from('special_workers')
     .select('*')
+    .eq('ward_id', wardUtils.getWardId())
     .order('created_at', { ascending: false });
   if (error){ showToast('Failed to load: ' + error.message, 'error'); return; }
   _list = data || [];
@@ -596,8 +602,9 @@ async function saveWorker(){
   const btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
-  const payload = {
+ const payload = {
     omang_number:          omang,
+    ward_id:               wardUtils.getWardId(),   // ← fix this
     surname,
     first_name:            first,
     date_of_birth:         dob,
@@ -609,7 +616,7 @@ async function saveWorker(){
     category,
     start_date:            startDate || null,
     notes,
-  };
+};
 
   let error;
   if (_editId){

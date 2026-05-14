@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Audit Log</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- WARD UTILS — Step 1: added ward-utils.js before the page script -->
+<script src="ward-utils.js"></script>
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;
+    --orange:#fd7e14;--text:#dff0eb;--muted:#6b8c84;
+    --green:#2c5530;--green2:#34623a;--green3:#3d6f44;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
+
+  /* ── Header ── */
+  .header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 60%,var(--green3) 100%);padding:1.6rem 1.5rem 1.4rem;display:flex;align-items:center;gap:1rem;}
+  .logo-circle{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--green);flex-shrink:0;}
+  .header-text{flex:1;min-width:0;}
+  .header-text h1{font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.35rem);font-weight:700;color:#fff;line-height:1.2;}
+  .header-text p{font-size:.67rem;color:rgba(255,255,255,.8);margin-top:.2rem;letter-spacing:.04em;}
+  .back-pill{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.42rem 1rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;flex-shrink:0;transition:background .15s;}
+  .back-pill:hover{background:rgba(255,255,255,.28);}
+
+  /* ── Body ── */
+  .scroll-body{padding:1.5rem;}
+
+  /* ── Stats ── */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.4rem;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;text-align:center;}
+  .stat-num{font-family:'Fraunces',serif;font-size:1.9rem;font-weight:700;line-height:1;}
+  .stat-lbl{font-size:.52rem;color:var(--muted);margin-top:.3rem;letter-spacing:.1em;text-transform:uppercase;}
+  .stat-card.ac .stat-num{color:var(--accent);}
+  .stat-card.rd .stat-num{color:var(--red);}
+  .stat-card.or .stat-num{color:var(--orange);}
+
+  /* ── Filters ── */
+  .toolbar{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.1rem;align-items:center;}
+  .search-wrap{flex:1;min-width:180px;position:relative;}
+  .search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.76rem;padding:.6rem 1rem .6rem 2.2rem;border-radius:8px;outline:none;transition:border-color .15s;}
+  .search-wrap input:focus{border-color:var(--accent);}
+  .search-wrap input::placeholder{color:var(--muted);}
+  .search-icon{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.85rem;pointer-events:none;}
+  .filter-chips{display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:1.2rem;}
+  .chip{padding:.3rem .85rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.63rem;cursor:pointer;font-family:'DM Mono',monospace;white-space:nowrap;transition:all .15s;}
+  .chip:hover{border-color:var(--accent);color:var(--text);}
+  .chip.active{background:var(--green);border-color:var(--accent);color:var(--accent);font-weight:500;}
+
+  /* ── Project filter select ── */
+  .proj-select{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.72rem;padding:.55rem .85rem;border-radius:8px;outline:none;cursor:pointer;transition:border-color .15s;flex-shrink:0;}
+  .proj-select:focus{border-color:var(--accent);}
+
+  /* ── Date range ── */
+  .date-row{display:flex;gap:.6rem;margin-bottom:1.1rem;flex-wrap:wrap;align-items:center;}
+  .date-row label{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+  .date-row input[type=date]{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.72rem;padding:.52rem .8rem;border-radius:7px;outline:none;transition:border-color .15s;}
+  .date-row input[type=date]:focus{border-color:var(--accent);}
+  .clear-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:.65rem;padding:.45rem .85rem;border-radius:7px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .clear-btn:hover{border-color:var(--red);color:var(--red);}
+
+  /* ── Export ── */
+  .export-btn{background:rgba(79,192,212,.07);border:1px dashed rgba(79,192,212,.4);color:var(--blue);font-family:'DM Mono',monospace;font-size:.72rem;padding:.55rem 1rem;border-radius:8px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .export-btn:hover{background:rgba(79,192,212,.14);}
+
+  /* ── Log entries ── */
+  .section-label{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem;}
+  .log-entry{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1.1rem;margin-bottom:.6rem;display:flex;gap:.85rem;align-items:flex-start;}
+  .log-entry.action-added   {border-left:4px solid var(--accent);}
+  .log-entry.action-updated {border-left:4px solid var(--gold);}
+  .log-entry.action-removed {border-left:4px solid var(--red);}
+  .action-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;margin-top:.05rem;}
+  .action-icon.added  {background:rgba(0,201,138,.12);}
+  .action-icon.updated{background:rgba(232,184,75,.12);}
+  .action-icon.removed{background:rgba(240,96,96,.12);}
+  .log-body{flex:1;min-width:0;}
+  .log-top{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.35rem;}
+  .action-badge{font-size:.5rem;padding:.13rem .55rem;border-radius:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:500;}
+  .ab-added  {background:rgba(0,201,138,.15);color:var(--accent);border:1px solid rgba(0,201,138,.3);}
+  .ab-updated{background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);}
+  .ab-removed{background:rgba(240,96,96,.15);color:var(--red);border:1px solid rgba(240,96,96,.3);}
+  .log-name{font-size:.88rem;font-weight:500;color:var(--text);}
+  .log-detail{font-size:.63rem;color:var(--muted);line-height:1.9;}
+  .log-detail b{color:var(--text);font-weight:400;}
+  .log-details-box{margin-top:.45rem;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:.55rem .8rem;font-size:.62rem;color:var(--muted);line-height:1.9;}
+  .log-details-box span{color:var(--text);}
+  .log-time{font-size:.6rem;color:var(--muted);white-space:nowrap;flex-shrink:0;margin-top:.1rem;}
+
+  /* ── Loading / empty ── */
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:.78rem;color:var(--muted);letter-spacing:.1em;}
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.78rem;font-style:italic;}
+
+  /* ── Pagination ── */
+  .pagination{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1.2rem;flex-wrap:wrap;}
+  .page-btn{background:var(--s2);border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:.65rem;padding:.38rem .85rem;border-radius:7px;cursor:pointer;transition:all .15s;}
+  .page-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+  .page-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .page-btn.active{background:var(--green);border-color:var(--accent);color:var(--accent);font-weight:500;}
+  .page-info{font-size:.62rem;color:var(--muted);}
+
+  @media(max-width:400px){.stats{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading audit log…</div>
+</div>
+
+<div class="header">
+  <div class="logo-circle">IK</div>
+  <div class="header-text">
+    <h1>Audit Log</h1>
+    <p>Worker activity history — Ipelegeng Programme</p>
+  </div>
+  <button class="back-pill" id="backBtn" onclick="history.back()">← Back</button>
+</div>
+
+<div class="scroll-body">
+
+  <div class="stats">
+    <div class="stat-card ac"><div class="stat-num" id="stat-added">—</div><div class="stat-lbl">Added</div></div>
+    <div class="stat-card or"><div class="stat-num" id="stat-updated">—</div><div class="stat-lbl">Updated</div></div>
+    <div class="stat-card rd"><div class="stat-num" id="stat-removed">—</div><div class="stat-lbl">Removed</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search by name, Omang, or officer…" oninput="applyFilters()">
+    </div>
+    <select class="proj-select" id="projSelect" onchange="applyFilters()">
+      <option value="">All Projects</option>
+    </select>
+    <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <!-- Action filter chips -->
+  <div class="filter-chips">
+    <div class="chip active" data-f="all"     onclick="setFilter(this)">All Actions</div>
+    <div class="chip"        data-f="added"   onclick="setFilter(this)">✅ Added</div>
+    <div class="chip"        data-f="updated" onclick="setFilter(this)">✏️ Updated</div>
+    <div class="chip"        data-f="removed" onclick="setFilter(this)">🗑 Removed</div>
+  </div>
+
+  <!-- Date range -->
+  <div class="date-row">
+    <label>From</label>
+    <input type="date" id="dateFrom" onchange="applyFilters()">
+    <label>To</label>
+    <input type="date" id="dateTo" onchange="applyFilters()">
+    <button class="clear-btn" onclick="clearDates()">Clear dates</button>
+  </div>
+
+  <div class="section-label" id="listLabel">Loading…</div>
+  <div id="logList"></div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+const PAGE_SIZE  = 30;
+
+let _logs     = [];
+let _filtered = [];
+let _filter   = 'all';
+let _page     = 1;
+let _projects = {};
+
+// ── Supabase REST helper ───────────────────────────────────────────────────
+const hdrs = {
+  'Content-Type':  'application/json',
+  'apikey':        SUPA_KEY,
+  'Authorization': `Bearer ${SUPA_KEY}`,
+  'Prefer':        'return=representation'
+};
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    headers: { ...hdrs, ...(opts.headers || {}) }, ...opts
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.message || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  // STEP 2: Replace old session check with wardUtils.init(sb)
+  // wardUtils handles: session check → redirect to login if not logged in,
+  // ward lookup → redirect to ward-register if no ward found,
+  // suspension check → redirect to suspended.html if suspended.
+  await wardUtils.init(sb);
+
+  wardUtils.onReady(async () => {
+    if (PROJECT_ID) {
+     
+    }
+    await Promise.all([loadProjects(), loadLogs()]);
+    document.getElementById('loadingScreen').style.display = 'none';
+  });
+}
+
+// ── Load projects for dropdown ─────────────────────────────────────────────
+async function loadProjects() {
+  // STEP 3: Wrap the fetch path with wardUtils.filter()
+  // This appends &ward_id=eq.<wardId> so officers only see their own projects.
+  // Super-admins see all (filter is a no-op for them).
+  const data = await sbFetch(
+    wardUtils.filter('projects?order=created_at.desc&select=id,project_name,month,year')
+  ).catch(() => []);
+
+  if (!data) return;
+  const sel = document.getElementById('projSelect');
+  data.forEach(p => {
+    _projects[p.id] = p.project_name;
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.project_name}${p.month ? ' · ' + p.month : ''}${p.year ? ' ' + p.year : ''}`;
+    if (p.id === PROJECT_ID) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Load logs ──────────────────────────────────────────────────────────────
+async function loadLogs() {
+  // STEP 3: Wrap with wardUtils.filter() — officers see only their ward's logs.
+  // If PROJECT_ID is set we add a second filter for the specific project too.
+  let path = wardUtils.filter('worker_audit_log?order=performed_at.desc&limit=2000&select=*');
+  if (PROJECT_ID) path += `&project_id=eq.${PROJECT_ID}`;
+
+  const data = await sbFetch(path).catch(() => null);
+  if (data === null) {
+    document.getElementById('listLabel').textContent = 'Error loading logs.';
+    return;
+  }
+
+  _logs = data || [];
+
+  document.getElementById('stat-added').textContent   = _logs.filter(l => l.action === 'added').length;
+  document.getElementById('stat-updated').textContent = _logs.filter(l => l.action === 'updated').length;
+  document.getElementById('stat-removed').textContent = _logs.filter(l => l.action === 'removed').length;
+
+  applyFilters();
+}
+
+// ── Filters ────────────────────────────────────────────────────────────────
+function setFilter(el) {
+  document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  _filter = el.dataset.f;
+  _page   = 1;
+  applyFilters();
+}
+
+function clearDates() {
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value   = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  const q       = (document.getElementById('searchInput').value || '').toLowerCase();
+  const projVal = document.getElementById('projSelect').value;
+  const from    = document.getElementById('dateFrom').value;
+  const to      = document.getElementById('dateTo').value;
+
+  _filtered = _logs.filter(l => {
+    if (_filter !== 'all' && l.action !== _filter) return false;
+    if (projVal && l.project_id !== projVal) return false;
+    if (from && l.performed_at < from) return false;
+    if (to   && l.performed_at.slice(0,10) > to) return false;
+    if (q) {
+      const hay = `${l.worker_name} ${l.worker_omang} ${l.performed_by} ${l.action}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  _page = 1;
+  renderPage();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderPage() {
+  const total = _filtered.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (_page > pages) _page = pages;
+
+  const slice = _filtered.slice((_page - 1) * PAGE_SIZE, _page * PAGE_SIZE);
+
+  document.getElementById('listLabel').textContent =
+    `${total} record${total !== 1 ? 's' : ''} · page ${_page} of ${pages}`;
+
+  const el = document.getElementById('logList');
+  if (!slice.length) {
+    el.innerHTML = `<div class="empty-state">No audit records match your filters.</div>`;
+    renderPagination(pages);
+    return;
+  }
+
+  el.innerHTML = slice.map(l => {
+    const icon    = l.action === 'added' ? '✅' : l.action === 'updated' ? '✏️' : '🗑️';
+    const ts      = new Date(l.performed_at);
+    const dateStr = ts.toLocaleDateString('en-ZA', { day:'2-digit', month:'short', year:'numeric' });
+    const timeStr = ts.toLocaleTimeString('en-ZA', { hour:'2-digit', minute:'2-digit' });
+    const projName = l.project_id ? (_projects[l.project_id] || 'Unknown project') : '—';
+    const details  = l.details && typeof l.details === 'object' ? l.details : null;
+
+    let detailsHtml = '';
+    if (details && Object.keys(details).length) {
+      const rows = Object.entries(details).map(([k, v]) => {
+        const label = k.replace(/_/g, ' ');
+        const val   = Array.isArray(v) ? v.join(', ') : String(v);
+        return `<div><span style="opacity:.6">${label}:</span> <span>${val}</span></div>`;
+      }).join('');
+      detailsHtml = `<div class="log-details-box">${rows}</div>`;
+    }
+
+    return `<div class="log-entry action-${l.action}">
+      <div class="action-icon ${l.action}">${icon}</div>
+      <div class="log-body">
+        <div class="log-top">
+          <span class="action-badge ab-${l.action}">${l.action}</span>
+          <span class="log-name">${l.worker_name}</span>
+        </div>
+        <div style="margin-bottom:.35rem;">
+          <span style="font-size:.72rem;background:rgba(79,192,212,.1);border:1px solid rgba(79,192,212,.25);
+            color:var(--blue);padding:.15rem .65rem;border-radius:20px;font-weight:500;">
+            👤 ${l.performed_by}
+          </span>
+        </div>
+        <div class="log-detail">
+          🆔 <b>${fmtOmang(l.worker_omang)}</b>
+          &nbsp;·&nbsp; 📌 <b>${projName}</b>
+        </div>
+        <div class="log-detail">⏰ <b>${dateStr} ${timeStr}</b></div>
+        ${detailsHtml}
+      </div>
+      <div class="log-time">${dateStr}<br>${timeStr}</div>
+    </div>`;
+  }).join('');
+
+  renderPagination(pages);
+}
+
+function renderPagination(pages) {
+  const el = document.getElementById('pagination');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+
+  const MAX_SHOWN = 7;
+  let html = `<button class="page-btn" onclick="goPage(${_page - 1})" ${_page === 1 ? 'disabled' : ''}>← Prev</button>`;
+
+  let start = Math.max(1, _page - Math.floor(MAX_SHOWN / 2));
+  let end   = Math.min(pages, start + MAX_SHOWN - 1);
+  if (end - start < MAX_SHOWN - 1) start = Math.max(1, end - MAX_SHOWN + 1);
+
+  if (start > 1) html += `<button class="page-btn" onclick="goPage(1)">1</button>${start > 2 ? '<span class="page-info">…</span>' : ''}`;
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i === _page ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  if (end < pages) html += `${end < pages - 1 ? '<span class="page-info">…</span>' : ''}<button class="page-btn" onclick="goPage(${pages})">${pages}</button>`;
+
+  html += `<button class="page-btn" onclick="goPage(${_page + 1})" ${_page === pages ? 'disabled' : ''}>Next →</button>`;
+  html += `<span class="page-info">${_filtered.length} records</span>`;
+  el.innerHTML = html;
+}
+
+function goPage(p) {
+  _page = p;
+  renderPage();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmtOmang(v) {
+  const d = (v || '').replace(/\D/g, '').substring(0, 9);
+  let o = '';
+  for (let i = 0; i < d.length; i++) { if (i && i % 3 === 0) o += ' '; o += d[i]; }
+  return o || '—';
+}
+
+// ── Export CSV ─────────────────────────────────────────────────────────────
+// NOTE — Step 4 (wardUtils.body) does not apply here:
+// this page only reads data (no POST/PATCH), so there are no request bodies to inject ward_id into.
+function exportCSV() {
+  const rows = [['Action','Worker Name','Omang','Performed By','Project','Date & Time','Details']];
+  _filtered.forEach(l => {
+    const projName = l.project_id ? (_projects[l.project_id] || 'Unknown') : 'Global';
+    const details  = l.details ? JSON.stringify(l.details) : '';
+    rows.push([
+      l.action,
+      l.worker_name,
+      l.worker_omang,
+      l.performed_by,
+      projName,
+      new Date(l.performed_at).toLocaleString('en-ZA'),
+      details,
+    ]);
+  });
+  const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `audit-log-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+init();
+</script>
+</body>
+</html>

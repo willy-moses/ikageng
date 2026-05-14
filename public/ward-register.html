@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Register Your Ward</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:      #09100f;
+    --surface: #111a18;
+    --s2:      #18241f;
+    --border:  #1e2d28;
+    --accent:  #00c98a;
+    --gold:    #e8b84b;
+    --blue:    #4fc0d4;
+    --red:     #f06060;
+    --text:    #dff0eb;
+    --muted:   #6b8c84;
+    --green:   #2c5530;
+    --green2:  #34623a;
+    --green3:  #3d6f44;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Mono', monospace; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-start; padding: 2rem 1.5rem;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(circle at 15% 25%, rgba(0,201,138,.05) 0%, transparent 50%),
+      radial-gradient(circle at 85% 75%, rgba(232,184,75,.04) 0%, transparent 50%);
+  }
+
+  .wrap { width: min(520px, 100%); position: relative; z-index: 1; }
+
+  .top-brand { text-align: center; margin-bottom: 2rem; }
+  .logo-circle {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 60%, var(--green3) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 700;
+    color: #fff; margin: 0 auto .9rem;
+    border: 2px solid rgba(0,201,138,.3);
+    box-shadow: 0 0 0 6px rgba(0,201,138,.06);
+  }
+  .brand-title { font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 700; color: var(--text); }
+  .brand-sub   { font-size: .63rem; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; margin-top: .3rem; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem;
+    animation: fadeUp .3s ease;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+
+  .card-title {
+    font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 700;
+    color: var(--accent); margin-bottom: .4rem; text-align: center;
+  }
+  .card-sub {
+    font-size: .68rem; color: var(--muted); text-align: center;
+    margin-bottom: 1.8rem; line-height: 1.6;
+  }
+
+  .section-divider {
+    font-size: .55rem; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--muted); margin: 1.4rem 0 .9rem;
+    display: flex; align-items: center; gap: .8rem;
+  }
+  .section-divider::before, .section-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+  .form-group { display: flex; flex-direction: column; gap: .32rem; margin-bottom: .85rem; }
+  .form-group label { font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+
+  input[type="text"], input[type="email"], input[type="password"], select {
+    background: var(--s2); border: 1px solid var(--border); color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: .8rem; padding: .65rem .9rem;
+    border-radius: 7px; outline: none; width: 100%;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,201,138,.1);
+  }
+  input::placeholder { color: var(--muted); }
+  input.error { border-color: var(--red); }
+  select { cursor: pointer; appearance: none; -webkit-appearance: none; }
+
+  .select-wrap { position: relative; }
+  .select-wrap::after {
+    content: '▾'; position: absolute; right: .9rem; top: 50%;
+    transform: translateY(-50%); color: var(--muted); pointer-events: none;
+    font-size: .8rem;
+  }
+
+  .input-wrap { position: relative; }
+  .toggle-pass {
+    position: absolute; right: .8rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    font-size: .8rem; padding: .2rem; transition: color .15s;
+  }
+  .toggle-pass:hover { color: var(--accent); }
+  .pass-input { padding-right: 2.8rem !important; }
+
+  .field-err { font-size: .62rem; color: var(--red); margin-top: .2rem; display: none; }
+  .field-err.show { display: block; }
+
+  .error-banner {
+    background: rgba(240,96,96,.08); border: 1px solid rgba(240,96,96,.3);
+    border-radius: 8px; padding: .75rem 1rem; font-size: .72rem;
+    color: var(--red); margin-bottom: 1rem; display: none;
+    line-height: 1.6; text-align: center;
+  }
+  .error-banner.show { display: block; }
+
+  .submit-btn {
+    width: 100%; padding: .85rem;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green2) 100%);
+    border: 1px solid rgba(0,201,138,.35); border-radius: 8px;
+    color: #fff; font-family: 'DM Mono', monospace; font-size: .82rem;
+    font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+    cursor: pointer; transition: opacity .2s, transform .1s;
+    display: flex; align-items: center; justify-content: center; gap: .6rem;
+    margin-top: .5rem;
+  }
+  .submit-btn:hover:not(:disabled) { opacity: .87; }
+  .submit-btn:active:not(:disabled) { transform: scale(.985); }
+  .submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .btn-spinner {
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    animation: spin .6s linear infinite; display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .success-state {
+    display: none; flex-direction: column; align-items: center;
+    gap: 1rem; padding: 1.5rem 0; text-align: center;
+  }
+  .success-state.show { display: flex; }
+  .success-icon {
+    width: 68px; height: 68px; border-radius: 50%;
+    background: rgba(0,201,138,.1); border: 2px solid rgba(0,201,138,.4);
+    display: flex; align-items: center; justify-content: center; font-size: 1.9rem;
+  }
+  .success-title { font-family: 'Fraunces', serif; font-size: 1.2rem; color: var(--accent); }
+  .success-sub   { font-size: .72rem; color: var(--muted); line-height: 1.8; max-width: 300px; }
+
+  .login-link {
+    text-align: center; margin-top: 1.5rem; font-size: .68rem; color: var(--muted);
+  }
+  .login-link a { color: var(--accent); text-decoration: none; }
+  .login-link a:hover { text-decoration: underline; }
+
+  .districts-note {
+    background: rgba(79,192,212,.06); border: 1px solid rgba(79,192,212,.2);
+    border-radius: 7px; padding: .65rem .9rem; font-size: .65rem;
+    color: var(--blue); line-height: 1.7; margin-bottom: .9rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-brand">
+    <div class="logo-circle">IK</div>
+    <div class="brand-title">Ikageng VDC</div>
+    <div class="brand-sub">Register Your Ward</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Ward Registration</div>
+    <div class="card-sub">Create an account to manage your ward's workers, projects, and waiting list.</div>
+
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- REGISTRATION FORM -->
+    <div id="regForm">
+
+      <div class="section-divider">Ward Information</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Ward Name *</label>
+          <input type="text" id="wardName" placeholder="e.g., Ikageng Ward 3">
+          <div class="field-err" id="wardNameErr">Ward name is required.</div>
+        </div>
+        <div class="form-group">
+          <label>Village / Town *</label>
+          <input type="text" id="location" placeholder="e.g., Gantsi">
+          <div class="field-err" id="locationErr">Location is required.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>District</label>
+        <div class="select-wrap">
+          <select id="district">
+            <option value="">— Select District —</option>
+            <option>Central</option>
+            <option>Chobe</option>
+            <option>Ghanzi</option>
+            <option>Kgalagadi</option>
+            <option>Kgatleng</option>
+            <option>Kweneng</option>
+            <option>North East</option>
+            <option>North West</option>
+            <option>South East</option>
+            <option>Southern</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-divider">Officer Account</div>
+
+      <div class="districts-note">
+        ℹ️ This email will be your login. Use a valid email you have access to.
+      </div>
+
+      <div class="form-group">
+        <label>Contact Email *</label>
+        <input type="email" id="email" placeholder="officer@ward.gov.bw">
+        <div class="field-err" id="emailErr">Enter a valid email address.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Contact Phone</label>
+        <input type="text" id="phone" placeholder="+267 7X XXX XXX">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Password *</label>
+          <div class="input-wrap">
+            <input type="password" id="pass" class="pass-input" placeholder="Min 8 characters">
+            <button class="toggle-pass" type="button" id="eye1" onclick="togglePass('pass','eye1')">👁</button>
+          </div>
+          <div class="field-err" id="passErr">Password must be at least 8 characters.</div>
+        </div>
+        <div class="form-group">
+          <label>Confirm Password *</label>
+          <div class="input-wrap">
+            <input type="password" id="pass2" class="pass-input" placeholder="Repeat password">
+            <button class="toggle-pass" type="button" id="eye2" onclick="togglePass('pass2','eye2')">👁</button>
+          </div>
+          <div class="field-err" id="pass2Err">Passwords do not match.</div>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="regBtn" onclick="doRegister()">
+        <div class="btn-spinner" id="btnSpinner"></div>
+        <span id="btnLabel">Create Ward Account</span>
+      </button>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div class="success-state" id="successState">
+      <div class="success-icon">✓</div>
+      <div class="success-title">Ward Registered!</div>
+      <div class="success-sub" id="successMsg">
+        Your ward account has been created successfully.<br>
+        Redirecting to login…
+      </div>
+    </div>
+
+    <div class="login-link">
+      Already have an account? <a href="login.html">Sign in here</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── NO top-level await anywhere in this file ──────────────────────────────────
+
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+
+// Create supabase client — synchronous, no await needed
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// Redirect if already logged in — all async work inside IIFE
+
+
+// ── Toggle password visibility ────────────────────────────────────────────────
+function togglePass(inputId, btnId) {
+  var inp = document.getElementById(inputId);
+  var btn = document.getElementById(btnId);
+  if (!inp || !btn) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+// ── Register ──────────────────────────────────────────────────────────────────
+function doRegister() {
+  // Clear all errors first
+  var fields = ['wardName', 'location', 'email', 'pass', 'pass2'];
+  fields.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('error');
+    var errEl = document.getElementById(id + 'Err');
+    if (errEl) errEl.classList.remove('show');
+  });
+  var banner = document.getElementById('errorBanner');
+  banner.classList.remove('show');
+  banner.textContent = '';
+
+  // Read values
+  var wardName = document.getElementById('wardName').value.trim();
+  var location = document.getElementById('location').value.trim();
+  var district = document.getElementById('district').value;
+  var email    = document.getElementById('email').value.trim();
+  var phone    = document.getElementById('phone').value.trim();
+  var pass     = document.getElementById('pass').value;
+  var pass2    = document.getElementById('pass2').value;
+
+  // Validate
+  var valid = true;
+  if (!wardName) { showFieldErr('wardName'); valid = false; }
+  if (!location) { showFieldErr('location'); valid = false; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showFieldErr('email'); valid = false;
+  }
+  if (!pass || pass.length < 8) {
+    document.getElementById('passErr').textContent = 'Password must be at least 8 characters.';
+    showFieldErr('pass'); valid = false;
+  }
+  if (pass !== pass2) {
+    document.getElementById('pass2Err').textContent = 'Passwords do not match.';
+    showFieldErr('pass2'); valid = false;
+  }
+  if (!valid) return;
+
+  setLoading(true);
+
+  // All async work inside a named async function called immediately
+  (async function runRegister() {
+    try {
+      // 1. Create auth user
+      var signUpResult = await sb.auth.signUp({ email: email, password: pass });
+      var authErr  = signUpResult.error;
+      var authData = signUpResult.data;
+
+      if (authErr) {
+        var msg = authErr.message || '';
+        if (msg.toLowerCase().includes('already registered') ||
+            msg.toLowerCase().includes('already exists')) {
+          throw new Error('This email is already registered. Please log in instead.');
+        }
+        throw new Error(msg);
+      }
+
+      // 2. Sign in to get a valid session token
+      var signInResult = await sb.auth.signInWithPassword({ email: email, password: pass });
+      var signInErr  = signInResult.error;
+      var signInData = signInResult.data;
+
+      if (signInErr) throw new Error(signInErr.message);
+
+      var userId      = signInData.user ? signInData.user.id : null;
+      var accessToken = signInData.session ? signInData.session.access_token : null;
+
+      if (!accessToken) throw new Error('Could not get session token. Please try again.');
+
+      // 3. Check if ward already exists for this email
+      var checkRes = await fetch(
+        SUPA_URL + '/rest/v1/wards?contact_email=eq.' + encodeURIComponent(email) + '&select=id',
+        { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + accessToken } }
+      );
+      var existing = await checkRes.json();
+
+      if (existing && existing.length > 0) {
+        await sb.auth.signOut();
+        setLoading(false);
+        document.getElementById('regForm').style.display = 'none';
+        document.getElementById('successMsg').textContent =
+          'This ward is already registered. Redirecting to login…';
+        document.getElementById('successState').classList.add('show');
+        setTimeout(function() { window.location.replace('login.html'); }, 2500);
+        return;
+      }
+
+      // 4. Insert ward using authenticated token
+      var insertRes = await fetch(SUPA_URL + '/rest/v1/wards', {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':        SUPA_KEY,
+          'Authorization': 'Bearer ' + accessToken,
+          'Prefer':        'return=representation'
+        },
+        body: JSON.stringify({
+          ward_name:     wardName,
+          location:      location,
+          district:      district || null,
+          contact_email: email,
+          contact_phone: phone || null,
+          auth_user_id:  userId,
+          status:        'active'
+        })
+      });
+
+      if (!insertRes.ok) {
+        var errBody = await insertRes.json().catch(function() { return {}; });
+        if (errBody.code === '23505') {
+          throw new Error('This email is already registered to a ward.');
+        }
+        throw new Error(errBody.message || 'Ward save failed (HTTP ' + insertRes.status + ')');
+      }
+
+      // 5. Sign out — user will log in properly via login.html
+      await sb.auth.signOut();
+
+      setLoading(false);
+      document.getElementById('regForm').style.display = 'none';
+      document.getElementById('successState').classList.add('show');
+      setTimeout(function() { window.location.replace('login.html'); }, 3000);
+
+    } catch (err) {
+      setLoading(false);
+      showError(friendlyErr(err.message));
+    }
+  })();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showFieldErr(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.add('error');
+  var errEl = document.getElementById(id + 'Err');
+  if (errEl) errEl.classList.add('show');
+}
+
+function setLoading(on) {
+  var btn     = document.getElementById('regBtn');
+  var spinner = document.getElementById('btnSpinner');
+  var label   = document.getElementById('btnLabel');
+  btn.disabled          = on;
+  spinner.style.display = on ? 'block' : 'none';
+  label.textContent     = on ? 'Registering…' : 'Create Ward Account';
+}
+
+function showError(msg) {
+  var el = document.getElementById('errorBanner');
+  el.textContent = msg;
+  el.classList.add('show');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function friendlyErr(msg) {
+  if (!msg) return 'An unexpected error occurred.';
+  var m = msg.toLowerCase();
+  if (m.includes('already registered') || m.includes('user already'))
+    return 'This email is already registered. Please log in instead.';
+  if (m.includes('password'))
+    return 'Password must be at least 8 characters.';
+  if (m.includes('network') || m.includes('fetch'))
+    return 'Network error. Please check your connection.';
+  return msg;
+}
+</script>
+</body>
+</html>

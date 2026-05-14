@@ -22,44 +22,23 @@
     --green2:  #34623a;
     --green3:  #3d6f44;
   }
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Mono', monospace; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 1.5rem;
   }
-
-  /* ── Background pattern ── */
   body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background-image:
       radial-gradient(circle at 20% 20%, rgba(0,201,138,.04) 0%, transparent 50%),
       radial-gradient(circle at 80% 80%, rgba(44,85,48,.08) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
   }
 
-  .login-wrap {
-    width: min(420px, 100%);
-    position: relative;
-    z-index: 1;
-  }
+  .login-wrap { width: min(420px, 100%); position: relative; z-index: 1; }
 
-  /* ── Header above card ── */
-  .top-brand {
-    text-align: center;
-    margin-bottom: 1.8rem;
-  }
+  .top-brand { text-align: center; margin-bottom: 1.8rem; }
   .logo-circle {
     width: 64px; height: 64px; border-radius: 50%;
     background: linear-gradient(135deg, var(--green) 0%, var(--green2) 60%, var(--green3) 100%);
@@ -69,93 +48,66 @@
     border: 2px solid rgba(0,201,138,.3);
     box-shadow: 0 0 0 6px rgba(0,201,138,.06);
   }
-  .brand-title {
-    font-family: 'Fraunces', serif;
-    font-size: 1.5rem; font-weight: 700;
-    color: var(--text); line-height: 1.2;
-  }
-  .brand-sub {
-    font-size: .65rem; color: var(--muted);
-    letter-spacing: .14em; text-transform: uppercase;
-    margin-top: .35rem;
-  }
+  .brand-title { font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .brand-sub   { font-size: .65rem; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; margin-top: .35rem; }
 
-  /* ── Card ── */
   .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2rem 2rem 1.8rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem 2rem 1.8rem;
     animation: fadeUp .3s ease;
   }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
 
-  .card-title {
-    font-size: .6rem; letter-spacing: .2em; text-transform: uppercase;
-    color: var(--muted); text-align: center; margin-bottom: 1.5rem;
-  }
+  .card-title { font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); text-align: center; margin-bottom: 1.5rem; }
 
-  /* ── Form ── */
   .form-group { margin-bottom: 1.1rem; }
-  .form-label {
-    display: block; font-size: .58rem;
-    letter-spacing: .16em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: .38rem;
-  }
+  .form-label { display: block; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: .38rem; }
   .input-wrap { position: relative; }
   .form-input {
-    width: 100%; background: var(--s2);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: .7rem 1rem; font-family: 'DM Mono', monospace;
+    width: 100%; background: var(--s2); border: 1px solid var(--border);
+    border-radius: 8px; padding: .7rem 1rem; font-family: 'DM Mono', monospace;
     font-size: .82rem; color: var(--text); outline: none;
     transition: border-color .2s, box-shadow .2s;
   }
-  .form-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(0,201,138,.1);
-  }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,201,138,.1); }
   .form-input::placeholder { color: var(--muted); }
   .form-input.has-icon { padding-right: 2.8rem; }
   .form-input.error { border-color: var(--red); }
 
   .toggle-pass {
-    position: absolute; right: .8rem; top: 50%;
-    transform: translateY(-50%);
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); font-size: .8rem; padding: .2rem;
-    transition: color .15s; line-height: 1;
+    position: absolute; right: .8rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    font-size: .8rem; padding: .2rem; transition: color .15s; line-height: 1;
     font-family: 'DM Mono', monospace;
   }
   .toggle-pass:hover { color: var(--accent); }
 
-  .field-error {
-    font-size: .62rem; color: var(--red);
-    margin-top: .3rem; display: none; line-height: 1.5;
-  }
+  .field-error { font-size: .62rem; color: var(--red); margin-top: .3rem; display: none; line-height: 1.5; }
   .field-error.show { display: block; }
 
-  /* ── Global error banner ── */
   .error-banner {
-    background: rgba(240,96,96,.08);
-    border: 1px solid rgba(240,96,96,.28);
-    border-radius: 8px; padding: .75rem 1rem;
-    font-size: .72rem; color: var(--red);
-    margin-bottom: 1.1rem; display: none;
+    background: rgba(240,96,96,.08); border: 1px solid rgba(240,96,96,.28);
+    border-radius: 8px; padding: .75rem 1rem; font-size: .72rem;
+    color: var(--red); margin-bottom: 1.1rem; display: none;
     line-height: 1.6; text-align: center;
   }
   .error-banner.show { display: block; }
 
-  /* ── Submit button ── */
+  /* Admin badge — shown when email matches a super-admin */
+  .admin-badge {
+    background: rgba(232,184,75,.08); border: 1px solid rgba(232,184,75,.25);
+    border-radius: 8px; padding: .55rem .9rem; font-size: .65rem;
+    color: var(--gold); margin-bottom: 1rem; display: none;
+    line-height: 1.6; text-align: center;
+  }
+  .admin-badge.show { display: block; }
+
   .submit-btn {
     width: 100%; padding: .82rem;
     background: linear-gradient(135deg, var(--green) 0%, var(--green2) 100%);
     border: 1px solid rgba(0,201,138,.35); border-radius: 8px;
-    color: #fff; font-family: 'DM Mono', monospace;
-    font-size: .82rem; font-weight: 500;
-    letter-spacing: .1em; text-transform: uppercase;
+    color: #fff; font-family: 'DM Mono', monospace; font-size: .82rem;
+    font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
     cursor: pointer; transition: opacity .2s, transform .1s;
     display: flex; align-items: center; justify-content: center; gap: .65rem;
     margin-top: .3rem;
@@ -171,52 +123,36 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Success state ── */
   .success-state {
-    display: none; flex-direction: column;
-    align-items: center; gap: 1rem;
-    padding: 1rem 0; text-align: center;
+    display: none; flex-direction: column; align-items: center;
+    gap: 1rem; padding: 1rem 0; text-align: center;
   }
   .success-state.show { display: flex; }
   .success-icon {
     width: 60px; height: 60px; border-radius: 50%;
-    background: rgba(0,201,138,.1);
-    border: 2px solid rgba(0,201,138,.35);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.6rem;
+    background: rgba(0,201,138,.1); border: 2px solid rgba(0,201,138,.35);
+    display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
   }
   .success-title { font-family: 'Fraunces', serif; font-size: 1.1rem; color: var(--accent); }
   .success-sub   { font-size: .7rem; color: var(--muted); line-height: 1.7; }
-  .success-bar-wrap {
-    width: 100%; height: 3px; background: var(--border);
-    border-radius: 2px; overflow: hidden; margin-top: .3rem;
-  }
-  .success-bar {
-    height: 100%; background: var(--accent);
-    border-radius: 2px; width: 0%;
-    animation: fillBar 1.8s ease forwards;
-  }
+  .success-bar-wrap { width: 100%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: .3rem; }
+  .success-bar { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; animation: fillBar 1.8s ease forwards; }
   @keyframes fillBar { to { width: 100%; } }
 
-  /* ── Footer ── */
   .card-footer {
-    text-align: center; margin-top: 1.4rem;
-    font-size: .6rem; color: var(--muted); line-height: 1.8;
+    text-align: center; margin-top: 1.4rem; font-size: .6rem;
+    color: var(--muted); line-height: 1.8;
     border-top: 1px solid var(--border); padding-top: 1.1rem;
   }
   .card-footer strong { color: rgba(0,201,138,.7); }
-
-  .page-footer {
-    margin-top: 1.5rem; text-align: center;
-    font-size: .58rem; color: rgba(107,140,132,.5);
-    letter-spacing: .08em;
-  }
+  .card-footer a { color: var(--accent); text-decoration: none; }
+  .card-footer a:hover { text-decoration: underline; }
+  .page-footer { margin-top: 1.5rem; text-align: center; font-size: .58rem; color: rgba(107,140,132,.5); letter-spacing: .08em; }
 </style>
 </head>
 <body>
 
 <div class="login-wrap">
-
   <div class="top-brand">
     <div class="logo-circle">IK</div>
     <div class="brand-title">Ikageng VDC</div>
@@ -226,36 +162,26 @@
   <div class="card">
     <div class="card-title">Officer Login</div>
 
-    <!-- Error banner (shown on auth failure) -->
     <div class="error-banner" id="errorBanner"></div>
+    <div class="admin-badge" id="adminBadge">⭐ Super-admin account detected — you will be directed to the Admin Dashboard.</div>
 
-    <!-- Login form -->
     <div id="loginForm">
       <div class="form-group">
         <label class="form-label" for="emailInput">Email Address</label>
-        <input
-          class="form-input"
-          id="emailInput"
-          type="email"
-          placeholder="your@email.com"
+        <input class="form-input" id="emailInput" type="email" placeholder="your@email.com"
           autocomplete="email"
-          onkeydown="if(event.key==='Enter') document.getElementById('passInput').focus()"
-        >
+          oninput="checkAdminHint()"
+          onkeydown="if(event.key==='Enter') document.getElementById('passInput').focus()">
         <div class="field-error" id="emailErr">Please enter a valid email address.</div>
       </div>
 
       <div class="form-group">
         <label class="form-label" for="passInput">Password</label>
         <div class="input-wrap">
-          <input
-            class="form-input has-icon"
-            id="passInput"
-            type="password"
-            placeholder="••••••••"
+          <input class="form-input has-icon" id="passInput" type="password" placeholder="••••••••"
             autocomplete="current-password"
-            onkeydown="if(event.key==='Enter') doLogin()"
-          >
-          <button class="toggle-pass" onclick="togglePass()" type="button" title="Show / hide password" id="eyeBtn">👁</button>
+            onkeydown="if(event.key==='Enter') doLogin()">
+          <button class="toggle-pass" onclick="togglePass()" type="button" id="eyeBtn">👁</button>
         </div>
         <div class="field-error" id="passErr">Password is required.</div>
       </div>
@@ -266,18 +192,17 @@
       </button>
     </div>
 
-    <!-- Success state -->
     <div class="success-state" id="successState">
       <div class="success-icon">✓</div>
       <div class="success-title">Welcome back</div>
-      <div class="success-sub">Login successful.<br>Redirecting to project management…</div>
+      <div class="success-sub" id="successMsg">Login successful. Redirecting…</div>
       <div class="success-bar-wrap"><div class="success-bar"></div></div>
     </div>
 
-    <div class="card-footer">
-      VDC Officer Panel &nbsp;·&nbsp; <strong>Botswana</strong><br>
-      Authorised personnel only
-    </div>
+   <div class="card-footer">
+  VDC Officer Panel &nbsp;·&nbsp; <strong>Botswana</strong><br>
+  New ward? <a href="ward-register.html">Register your ward here</a>
+</div>
   </div>
 
   <div class="page-footer">Ikageng Ipelegeng Programme &nbsp;·&nbsp; Secure Login</div>
@@ -288,13 +213,29 @@ const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// ── Redirect if already logged in ─────────────────────────────────────────────
+// Redirect if already logged in
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) window.location.replace('index.html');
+  if (session) await routeUser(session.user.email);
 })();
 
-// ── Toggle password visibility ─────────────────────────────────────────────────
+// Show admin hint when email looks like a super-admin
+async function checkAdminHint() {
+  const email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    document.getElementById('adminBadge').classList.remove('show');
+    return;
+  }
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/super_admins?email=eq.${encodeURIComponent(email)}&select=id`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    const data = await res.json();
+    document.getElementById('adminBadge').classList.toggle('show', Array.isArray(data) && data.length > 0);
+  } catch { /* silent */ }
+}
+
 function togglePass() {
   const inp = document.getElementById('passInput');
   const btn = document.getElementById('eyeBtn');
@@ -302,19 +243,17 @@ function togglePass() {
   btn.textContent = inp.type === 'password' ? '👁' : '🙈';
 }
 
-// ── Login ─────────────────────────────────────────────────────────────────────
 async function doLogin() {
   const email = document.getElementById('emailInput').value.trim();
   const pass  = document.getElementById('passInput').value;
 
-  // Clear previous errors
+  // Clear errors
   document.getElementById('emailErr').classList.remove('show');
   document.getElementById('passErr').classList.remove('show');
   document.getElementById('errorBanner').classList.remove('show');
   document.getElementById('emailInput').classList.remove('error');
   document.getElementById('passInput').classList.remove('error');
 
-  // Validate
   let valid = true;
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     document.getElementById('emailErr').classList.add('show');
@@ -328,10 +267,8 @@ async function doLogin() {
   }
   if (!valid) return;
 
-  // Loading state
   setLoading(true);
 
-  // Supabase Auth
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
 
   if (error) {
@@ -340,22 +277,45 @@ async function doLogin() {
     return;
   }
 
-  // Success — show success state then redirect
-  document.getElementById('loginForm').style.display = 'none';
-  document.getElementById('successState').classList.add('show');
+  // Determine destination
+  const dest = await getDestination(email);
 
-  setTimeout(() => {
-    window.location.replace('index.html');
-  }, 2000);
+  document.getElementById('loginForm').style.display = 'none';
+  const successMsg = document.getElementById('successMsg');
+  successMsg.textContent = dest === 'admin-dashboard.html'
+    ? 'Super-admin login successful. Redirecting to Admin Dashboard…'
+    : 'Login successful. Redirecting to project management…';
+  document.getElementById('successState').classList.add('show');
+  setLoading(false);
+
+  setTimeout(() => window.location.replace(dest), 2000);
+}
+
+// Returns destination page based on whether the user is a super-admin
+async function getDestination(email) {
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/super_admins?email=eq.${encodeURIComponent(email.toLowerCase())}&select=id`,
+      { headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` } }
+    );
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) return 'admin-dashboard.html';
+  } catch { /* fall through */ }
+  return 'index.html';
+}
+
+async function routeUser(email) {
+  const dest = await getDestination(email);
+  window.location.replace(dest);
 }
 
 function setLoading(on) {
   const btn     = document.getElementById('loginBtn');
   const spinner = document.getElementById('btnSpinner');
   const label   = document.getElementById('btnLabel');
-  btn.disabled           = on;
-  spinner.style.display  = on ? 'block' : 'none';
-  label.textContent      = on ? 'Signing in…' : 'Sign In';
+  btn.disabled          = on;
+  spinner.style.display = on ? 'block' : 'none';
+  label.textContent     = on ? 'Signing in…' : 'Sign In';
 }
 
 function showError(msg) {
@@ -364,8 +324,9 @@ function showError(msg) {
   el.classList.add('show');
 }
 
+
 function friendlyError(msg) {
-  if (!msg) return 'An unexpected error occurred. Please try again.';
+  if (!msg) return 'An unexpected error occurred.';
   const m = msg.toLowerCase();
   if (m.includes('invalid login') || m.includes('invalid credentials'))
     return 'Incorrect email or password. Please try again.';
@@ -374,7 +335,7 @@ function friendlyError(msg) {
   if (m.includes('too many requests') || m.includes('rate limit'))
     return 'Too many attempts. Please wait a moment and try again.';
   if (m.includes('network') || m.includes('fetch'))
-    return 'Network error. Please check your connection and try again.';
+    return 'Network error. Please check your connection.';
   return msg;
 }
 </script>

@@ -7,8 +7,24 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "xlsx": "^0.18.5",
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
-  }
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "xlsx": "^0.18.5"
+  },
+  "main": "server.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/willy-moses/ikageng.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/willy-moses/ikageng/issues"
+  },
+  "homepage": "https://github.com/willy-moses/ikageng#readme"
 }

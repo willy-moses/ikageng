@@ -6,6 +6,7 @@
 <title>Ikageng — Quota Management</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="ward-utils.js"></script>
 <style>
   :root {
     --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
@@ -282,16 +283,32 @@ let _assignments = [];
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
   document.getElementById('backBtn').href =
-    PROJECT_ID ? `site-allocation.html?project=${PROJECT_ID}` : 'site-allocation.html';
+    SOURCE_PROJECT_ID ? `waitinglist.html?project=${SOURCE_PROJECT_ID}` : 'waitinglist.html';
 
-  await Promise.all([loadQuota(), loadSites(), loadAssignments()]);
-  render();
-  document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('mainContent').style.display   = 'block';
+  await wardUtils.init(sb);
+  wardUtils.onReady(async () => {
+    const { data, error } = await sb
+      .from('projects')
+      .select('id, project_name, month, year')
+      .eq('ward_id', wardUtils.getWardId())   // ← only this ward's projects
+      .order('created_at', { ascending: false });
+
+    if (error) { showToast('Failed to load projects: ' + error.message, 'error'); return; }
+    _projects = data || [];
+
+    renderSourceGrid();
+    document.getElementById('loadingScreen').style.display = 'none';
+
+    if (_sourceId) {
+      await onSourceSelected(_sourceId);
+    }
+  });
 }
 
 async function loadQuota() {
-  const { data } = await sb.from('quota').select('*').limit(1).single();
+  const { data } = await sb.from('quota').select('*')
+    .eq('ward_id', wardUtils.getWardId())
+    .limit(1).single();
   if (data) { _quotaId = data.id; _quota = data.total_quota || 0; }
 }
 
@@ -456,9 +473,9 @@ async function saveQuota() {
 
   let error;
   if (_quotaId) {
-    ({ error } = await sb.from('quota').update({ total_quota: val, updated_at: new Date().toISOString() }).eq('id', _quotaId));
+    ({ error } = await sb.from('quota').update({ total_quota: val,ward_id: wardUtils.getWardId(), updated_at: new Date().toISOString() }).eq('id', _quotaId));
   } else {
-    const res = await sb.from('quota').insert({ total_quota: val }).select().single();
+    const res = await sb.from('quota').insert({ total_quota: val,ward_id: wardUtils.getWardId()  }).select().single();
     error = res.error;
     if (res.data) _quotaId = res.data.id;
   }

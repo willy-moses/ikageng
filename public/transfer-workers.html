@@ -6,6 +6,7 @@
 <title>Ikageng — Transfer Workers</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="ward-utils.js"></script>
 <style>
   :root {
     --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
@@ -253,21 +254,24 @@ async function init() {
   document.getElementById('backBtn').href =
     SOURCE_PROJECT_ID ? `waitinglist.html?project=${SOURCE_PROJECT_ID}` : 'waitinglist.html';
 
-  const { data, error } = await sb
-    .from('projects')
-    .select('id, project_name, month, year')
-    .order('created_at', { ascending: false });
+  await wardUtils.init(sb);
+  wardUtils.onReady(async () => {
+    const { data, error } = await sb
+      .from('projects')
+      .select('id, project_name, month, year')
+      .eq('ward_id', wardUtils.getWardId())
+      .order('created_at', { ascending: false });
 
-  if (error) { showToast('Failed to load projects: ' + error.message, 'error'); return; }
-  _projects = data || [];
+    if (error) { showToast('Failed to load projects: ' + error.message, 'error'); return; }
+    _projects = data || [];
 
-  renderSourceGrid();
-  document.getElementById('loadingScreen').style.display = 'none';
+    renderSourceGrid();
+    document.getElementById('loadingScreen').style.display = 'none';
 
-  // Auto-select source if came from a project
-  if (_sourceId) {
-    await onSourceSelected(_sourceId);
-  }
+    if (_sourceId) {
+      await onSourceSelected(_sourceId);
+    }
+  });
 }
 
 // ── Source grid ────────────────────────────────────────────────────────────

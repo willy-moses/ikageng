@@ -6,6 +6,7 @@
 <title>Ikageng — Site Allocation</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="ward-utils.js"></script>
 <style>
   :root {
     --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
@@ -562,19 +563,26 @@ async function init() {
   document.getElementById('quotaBtn').href =
     PROJECT_ID ? `quota.html?project=${PROJECT_ID}` : 'quota.html';
 
-  // Export button links to export.html with project param
   const exportHref = PROJECT_ID ? `export.html?project=${PROJECT_ID}` : 'export.html';
   document.getElementById('exportBtn').href = exportHref;
 
-  loadVillageQuotasFromStorage();
-  if (PROJECT_ID) await loadProjectContext();
-  await Promise.all([loadSites(), loadAssignments(), loadQuota(), loadWaitingListVillages()]);
-  renderVillageFilter();
-  renderVqPanel();
-  renderSites();
-  renderQuotaBanner();
-  document.getElementById('loadingScreen').style.display = 'none';
+  await wardUtils.init(sb);
+  wardUtils.onReady(async () => {
+    loadVillageQuotasFromStorage();
+    if (PROJECT_ID) await loadProjectContext();
+    await Promise.all([loadSites(), loadAssignments(), loadQuota(), loadWaitingListVillages()]);
+    renderVillageFilter();
+    renderVqPanel();
+    renderSites();
+    renderQuotaBanner();
+    document.getElementById('loadingScreen').style.display = 'none';
+  });
 }
+
+
+
+
+
 
 async function loadProjectContext() {
   const { data } = await sb.from('projects').select('project_name,month,year').eq('id', PROJECT_ID).single();
@@ -586,16 +594,22 @@ async function loadProjectContext() {
 }
 
 async function loadSites() {
-  const { data, error } = await sb.from('sites').select('*').order('site_name');
+  const { data, error } = await sb.from('sites').select('*')
+    .eq('ward_id', wardUtils.getWardId())
+    .order('site_name');
   if (error) { showToast('Failed to load sites: ' + error.message, 'error'); return; }
   _sites = data || [];
 }
 
 async function loadAssignments() {
   if (!PROJECT_ID) { _assignments = []; return; }
-  const { data } = await sb.from('site_assignments').select('*').eq('project_id', PROJECT_ID);
+  const { data } = await sb.from('site_assignments').select('*')
+    .eq('project_id', PROJECT_ID)
+    .eq('ward_id', wardUtils.getWardId());
   const rawAssignments = data || [];
-  const { data: allData } = await sb.from('site_assignments').select('*');
+
+  const { data: allData } = await sb.from('site_assignments').select('*')
+    .eq('ward_id', wardUtils.getWardId());
   _allAssignments = allData || [];
 
   const wlOmangs = rawAssignments.filter(a => a.source === 'waiting_list').map(a => a.omang_number);
@@ -611,7 +625,8 @@ async function loadAssignments() {
   if (swOmangs.length) {
     const { data: sw } = await sb.from('special_workers')
       .select('omang_number,village,date_of_birth,start_date')
-      .in('omang_number', swOmangs);
+      .in('omang_number', swOmangs)
+      .eq('ward_id', wardUtils.getWardId());
     (sw || []).forEach(w => { swMap[w.omang_number] = w; });
   }
 
@@ -629,7 +644,9 @@ async function loadAssignments() {
 }
 
 async function loadQuota() {
-  const { data } = await sb.from('quota').select('*').limit(1).maybeSingle();
+  const { data } = await sb.from('quota').select('*')
+    .eq('ward_id', wardUtils.getWardId())
+    .limit(1).maybeSingle();
   _quota = data ? (data.total_quota || 0) : 0;
 }
 
@@ -768,7 +785,7 @@ async function openVillageAutoAssign(village) {
     let sl = site.allocated_slots - _assignments.filter(a => a.site_id === site.id).length;
     while (sl > 0 && idx < toAssign.length) {
       const w = toAssign[idx++];
-      toInsert.push({ site_id: site.id, project_id: PROJECT_ID, omang_number: w.omang_number, first_name: w.first_name, surname: w.surname, source: 'waiting_list' });
+     toInsert.push({ site_id: site.id, project_id: PROJECT_ID, omang_number: w.omang_number, first_name: w.first_name, surname: w.surname, source, ward_id: wardUtils.getWardId() });
       sl--;
     }
     if (idx >= toAssign.length) break;
@@ -1032,7 +1049,7 @@ async function saveSite() {
     if (error) { errEl.textContent = error.message; btn.disabled = false; btn.textContent = 'Update Site'; return; }
     showToast(`${name} updated ✓`, 'success');
   } else {
-    const { error } = await sb.from('sites').insert({ site_name: name, allocated_slots: slots });
+    const { error } = await sb.from('sites').insert({ site_name: name, allocated_slots: slots, ward_id: wardUtils.getWardId() });
     if (error) { errEl.textContent = error.message; btn.disabled = false; btn.textContent = 'Save Site'; return; }
     showToast(`${name} added ✓`, 'success');
   }
@@ -1193,7 +1210,7 @@ async function confirmAssign() {
   for (const omang of _selectedWorkers) {
     const w = _availableWorkers.find(x => x.omang_number === omang);
     if (!w) continue;
-    toInsert.push({ site_id: _assignSiteId, project_id: PROJECT_ID, omang_number: omang, first_name: w.first_name, surname: w.surname, source: _assignSource });
+    toInsert.push({ site_id: site.id, project_id: PROJECT_ID, omang_number: w.omang_number, first_name: w.first_name, surname: w.surname, source, ward_id: wardUtils.getWardId() });
   }
 
   const { error } = await sb.from('site_assignments').insert(toInsert);
@@ -1368,7 +1385,7 @@ async function runAutoAssign() {
     const sl = site.allocated_slots - c;
     for (let i = 0; i < sl && wi < workers.length; i++, wi++) {
       const w = workers[wi];
-      toInsert.push({ site_id: site.id, project_id: PROJECT_ID, omang_number: w.omang_number, first_name: w.first_name, surname: w.surname, source });
+      toInsert.push({ site_id: site.id, project_id: PROJECT_ID, omang_number: w.omang_number, first_name: w.first_name, surname: w.surname, source, ward_id: wardUtils.getWardId() });
     }
   }
 

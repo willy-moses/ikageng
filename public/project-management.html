@@ -6,6 +6,8 @@
 <title>Ikageng — VDC Projects</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="ward-utils.js"></script>
+
 <style>
   :root {
     --bg:      #09100f;
@@ -384,7 +386,7 @@ function setYear(y)  { selectedYear  = y; renderYearRow(); }
 // ── Load data ─────────────────────────────────────────────────────────────────
 async function loadProjects() {
   try {
-    const data = await sbFetch('projects?order=created_at.desc&select=*');
+   const data = await sbFetch(wardUtils.filter('projects?order=created_at.desc&select=id,project_name,month,year,description,created_at'));
     projects = data || [];
 
     const groups = await sbFetch('groups?select=project_id').catch(() => []);
@@ -517,12 +519,7 @@ async function createProject() {
   try {
     const result = await sbFetch('projects', {
       method: 'POST',
-      body: JSON.stringify({
-        project_name: name,
-        month:        selectedMonth,
-        year:         selectedYear,
-        description:  desc || null
-      })
+     body: JSON.stringify(wardUtils.body({ project_name: name, description: desc, month: selectedMonth, year: selectedYear }))
     });
 
     if (result && result.length) projects.unshift(result[0]);
@@ -599,11 +596,12 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 // ── Init — session check FIRST, then load data ────────────────────────────────
 async function init() {
   // 1. Check if user is logged in — redirect to login if not
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    window.location.replace('login.html');
-    return; // stop everything else
-  }
+await wardUtils.init(sb);           // handles login check, ward lookup, suspension
+wardUtils.onReady(async () => {
+  await loadProjects();             // your existing load calls go inside here
+  await loadLogs();
+  document.getElementById('loadingScreen').style.display = 'none';
+});
 
   // 2. Show logged-in user email
   const userStrip = document.getElementById('userStrip');

@@ -851,7 +851,16 @@ async function archiveCurrentProject() {
       is_supervisor: m.is_supervisor,
       position:      m.position,
       // ── members.created_at = when they joined/were hired ─────────────────
-      last_worked_date: m.created_at ? new Date(m.created_at).toISOString() : null
+      last_worked_date: (() => {
+  const MONTH_NAMES = ['January','February','March','April','May','June',
+                       'July','August','September','October','November','December'];
+  const m_idx = MONTH_NAMES.indexOf(currentProject.month);
+  const year  = parseInt(currentProject.year);
+  if (!isNaN(year) && m_idx !== -1) {
+    return new Date(year, m_idx + 1, 0).toISOString();
+  }
+  return new Date().toISOString();
+})()
     };
   });
 
