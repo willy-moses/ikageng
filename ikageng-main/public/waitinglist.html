@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Worker Waiting List</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;
+    --orange:#fd7e14;--text:#dff0eb;--muted:#6b8c84;
+    --green:#2c5530;--green2:#34623a;--green3:#3d6f44;--sup:#d4a574;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
+
+  .header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 60%,var(--green3) 100%);padding:1.6rem 1.5rem 1.4rem;display:flex;align-items:center;gap:1rem;}
+  .logo-circle{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--green);flex-shrink:0;}
+  .header-text{flex:1;min-width:0;}
+  .header-text h1{font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.35rem);font-weight:700;color:#fff;line-height:1.2;}
+  .header-text p{font-size:.67rem;color:rgba(255,255,255,.8);margin-top:.2rem;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .back-pill{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.42rem 1rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;flex-shrink:0;}
+  .back-pill:hover{background:rgba(255,255,255,.28);}
+
+  .project-strip{background:rgba(0,201,138,.06);border-bottom:1px solid rgba(0,201,138,.15);padding:.48rem 1.5rem;display:flex;align-items:center;gap:.5rem;font-size:.64rem;flex-wrap:wrap;}
+  .ps-label{color:var(--muted);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;}
+  .ps-name{color:var(--accent);font-weight:500;}
+  .ps-period{color:var(--muted);}
+  .ps-global{margin-left:auto;font-size:.56rem;background:rgba(79,192,212,.08);border:1px solid rgba(79,192,212,.2);color:var(--blue);padding:.15rem .6rem;border-radius:10px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
+
+  .scroll-body{padding:1.5rem;}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.4rem;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;text-align:center;}
+  .stat-num{font-family:'Fraunces',serif;font-size:1.9rem;font-weight:700;line-height:1;}
+  .stat-lbl{font-size:.52rem;color:var(--muted);margin-top:.3rem;letter-spacing:.1em;text-transform:uppercase;}
+  .stat-card.ac .stat-num{color:var(--accent);}
+  .stat-card.rd .stat-num{color:var(--red);}
+  .stat-card.or .stat-num{color:var(--orange);}
+
+  .global-notice{background:rgba(79,192,212,.05);border:1px solid rgba(79,192,212,.18);border-radius:9px;padding:.7rem 1rem;margin-bottom:1.1rem;font-size:.67rem;color:var(--blue);line-height:1.65;display:flex;align-items:flex-start;gap:.6rem;}
+  .global-notice .gn-icon{font-size:.9rem;flex-shrink:0;margin-top:.05rem;}
+
+  .search-wrap{position:relative;margin-bottom:.9rem;}
+  .search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.65rem 1rem .65rem 2.4rem;border-radius:8px;outline:none;transition:border-color .15s;}
+  .search-wrap input:focus{border-color:var(--accent);}
+  .search-wrap input::placeholder{color:var(--muted);}
+  .search-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem;pointer-events:none;}
+  .filter-chips{display:flex;gap:.5rem;margin-bottom:1.2rem;overflow-x:auto;padding-bottom:.2rem;}
+  .chip{padding:.32rem .9rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.65rem;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;white-space:nowrap;}
+  .chip:hover{border-color:var(--accent);color:var(--text);}
+  .chip.active{background:var(--green);border-color:var(--accent);color:var(--accent);font-weight:500;}
+  .add-btn{width:100%;padding:.9rem;background:rgba(79,192,212,.07);border:1px dashed rgba(79,192,212,.4);border-radius:10px;color:var(--blue);font-family:'DM Mono',monospace;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .2s;letter-spacing:.04em;margin-bottom:1.4rem;}
+  .add-btn:hover{background:rgba(79,192,212,.14);border-color:var(--blue);}
+  .section-label{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem;}
+
+  .worker-card{border-radius:10px;padding:1rem 1.1rem;margin-bottom:.7rem;}
+  .worker-card.p-veryhigh{background:rgba(240,96,96,.05);border:1px solid rgba(240,96,96,.2);border-left:4px solid var(--red);}
+  .worker-card.p-high{background:rgba(253,126,20,.05);border:1px solid rgba(253,126,20,.2);border-left:4px solid var(--orange);}
+  .worker-card.p-medium{background:rgba(232,184,75,.05);border:1px solid rgba(232,184,75,.2);border-left:4px solid var(--gold);}
+  .worker-card.p-low{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--muted);}
+  .card-top{display:flex;align-items:center;gap:.45rem;margin-bottom:.55rem;flex-wrap:wrap;}
+  .rank-badge{font-size:.58rem;background:var(--s2);border:1px solid var(--border);color:var(--muted);padding:.13rem .55rem;border-radius:10px;font-weight:500;}
+  .priority-badge{font-size:.52rem;padding:.14rem .55rem;border-radius:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:500;}
+  .pb-veryhigh{background:rgba(240,96,96,.15);color:var(--red);border:1px solid rgba(240,96,96,.3);}
+  .pb-high{background:rgba(253,126,20,.15);color:var(--orange);border:1px solid rgba(253,126,20,.3);}
+  .pb-medium{background:rgba(232,184,75,.15);color:var(--gold);border:1px solid rgba(232,184,75,.3);}
+  .pb-low{background:rgba(107,140,132,.1);color:var(--muted);border:1px solid var(--border);}
+  .returning-badge{font-size:.5rem;padding:.13rem .5rem;border-radius:10px;background:rgba(212,165,116,.15);color:var(--sup);border:1px solid rgba(212,165,116,.3);text-transform:uppercase;letter-spacing:.06em;}
+  .worker-name{font-size:.9rem;font-weight:500;color:var(--text);margin-bottom:.45rem;}
+  .worker-detail{font-size:.65rem;color:var(--muted);line-height:1.95;}
+  .worker-detail b{color:var(--text);font-weight:400;}
+  .worker-notes{font-size:.63rem;color:var(--gold);margin-top:.4rem;font-style:italic;}
+  .card-footer{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.8rem;}
+  .edit-pill{background:rgba(79,192,212,.08);border:1px solid rgba(79,192,212,.25);color:var(--blue);font-family:'DM Mono',monospace;font-size:.6rem;padding:.28rem .85rem;border-radius:5px;cursor:pointer;transition:all .15s;}
+  .edit-pill:hover{background:rgba(79,192,212,.18);}
+  .remove-pill{background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.25);color:var(--red);font-family:'DM Mono',monospace;font-size:.6rem;padding:.28rem .85rem;border-radius:5px;cursor:pointer;transition:all .15s;}
+  .remove-pill:hover{background:rgba(240,96,96,.18);}
+
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:.78rem;color:var(--muted);letter-spacing:.1em;}
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1.1rem;font-size:.72rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:300px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
+  .toast.info{border-color:rgba(79,192,212,.4);color:var(--blue);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;align-items:flex-end;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal-sheet{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 0 0;width:100%;max-width:600px;max-height:92vh;display:flex;flex-direction:column;animation:sheetUp .25s ease;}
+  @keyframes sheetUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+  .modal-header{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .modal-header h2{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:.2rem .5rem;border-radius:4px;}
+  .modal-close:hover{color:var(--red);}
+  .modal-body{flex:1;overflow-y:auto;padding:1.3rem 1.5rem;}
+  .modal-footer-btns{padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;gap:.75rem;flex-shrink:0;}
+  .modal-footer-btns button{flex:1;padding:.65rem;border-radius:6px;font-family:'DM Mono',monospace;font-size:.75rem;cursor:pointer;font-weight:500;}
+  .btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);}
+  .btn-cancel:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-save{background:var(--accent);border:none;color:#001a10;}
+  .btn-save:hover{opacity:.88;}
+  .btn-save:disabled{opacity:.45;cursor:not-allowed;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;}
+  .form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem;}
+  .form-group label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .form-group input,.form-group textarea{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.6rem .85rem;border-radius:7px;outline:none;transition:border-color .15s;width:100%;}
+  .form-group input:focus,.form-group textarea:focus{border-color:var(--accent);}
+  .form-group input::placeholder,.form-group textarea::placeholder{color:var(--muted);}
+  .form-group textarea{resize:vertical;min-height:68px;}
+  .chips-row{display:flex;gap:.45rem;flex-wrap:wrap;}
+  .fchip{padding:.3rem .8rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.65rem;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;}
+  .fchip:hover{border-color:var(--accent);color:var(--text);}
+  .fchip.active{background:var(--green);border-color:var(--accent);color:var(--accent);font-weight:500;}
+  .omang-hint{font-size:.62rem;margin-top:.2rem;color:var(--muted);}
+  .omang-hint.valid{color:var(--accent);}
+  .omang-hint.invalid{color:var(--red);}
+  .omang-hint.checking{color:var(--blue);}
+  .autofill-box{background:rgba(212,165,116,.07);border:1px solid rgba(212,165,116,.3);border-radius:9px;padding:1rem 1.1rem;margin-bottom:1rem;}
+  .autofill-box h4{font-family:'Fraunces',serif;font-size:.9rem;color:var(--sup);margin-bottom:.5rem;}
+  .autofill-box p{font-size:.67rem;color:var(--muted);line-height:1.9;}
+  .autofill-box p b{color:var(--text);font-weight:400;}
+  .form-err{font-size:.68rem;color:var(--red);margin-bottom:.6rem;min-height:1rem;}
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.78rem;font-style:italic;}
+
+  .modal-project-banner{background:rgba(0,201,138,.05);border:1px solid rgba(0,201,138,.15);border-radius:8px;padding:.55rem .9rem;margin-bottom:1rem;font-size:.65rem;color:var(--accent);display:flex;align-items:center;gap:.5rem;}
+  .modal-project-banner span{color:var(--muted);}
+
+  /* Omang locked in edit mode */
+  .omang-locked{background:var(--s2);border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:.78rem;padding:.6rem .85rem;border-radius:7px;width:100%;cursor:not-allowed;}
+
+  @media(max-width:400px){.form-row{grid-template-columns:1fr;}.stats{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading waiting list…</div>
+</div>
+
+<div class="header">
+  <div class="logo-circle">IK</div>
+  <div class="header-text">
+    <h1>Worker Waiting List</h1>
+    <p id="headerSub">Ipelegeng Programme — Priority Queue</p>
+  </div>
+  <a class="back-pill" id="backBtn" href="vdc-dashboard.html">← Dashboard</a>
+</div>
+
+<div class="project-strip" id="projectStrip" style="display:none">
+  <span class="ps-label">Project:</span>
+  <span class="ps-name" id="psName">—</span>
+  <span class="ps-period" id="psPeriod"></span>
+  <span class="ps-global" id="psGlobalBadge">Global List</span>
+</div>
+
+<div class="scroll-body">
+
+  <div class="stats">
+    <div class="stat-card ac"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total Waiting</div></div>
+   <div class="stat-card rd"><div class="stat-num" id="stat-veryhigh">—</div><div class="stat-lbl">High</div></div>
+<div class="stat-card or"><div class="stat-num" id="stat-high">—</div><div class="stat-lbl">Low</div></div>
+  </div>
+
+  <div class="global-notice" id="globalNotice">
+    <span class="gn-icon">🌐</span>
+    <span id="noticeText">This list is <strong>shared across all projects</strong>. Workers here are not tied to any specific project — they are available to be assigned to whichever project needs them.</span>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search by name, Omang, or village…" oninput="renderList()">
+  </div>
+
+  <div class="filter-chips">
+    <div class="chip active" data-f="all"       onclick="setFilter(this)">All</div>
+    <div class="chip"        data-f="veryhigh"  onclick="setFilter(this)">🔴 Very High</div>
+    <div class="chip"        data-f="high"      onclick="setFilter(this)">🟠 High</div>
+    <div class="chip"        data-f="medium"    onclick="setFilter(this)">🟡 Medium</div>
+    <div class="chip"        data-f="low"       onclick="setFilter(this)">⚪ Low</div>
+    <div class="chip"        data-f="returning" onclick="setFilter(this)">↩ Returning</div>
+  </div>
+
+  <!-- ── Action buttons row ── -->
+  <div style="display:flex;gap:.6rem;margin-bottom:1.4rem;">
+    <button class="add-btn" style="margin-bottom:0;flex:1" onclick="openModal()">+ Add Worker to Waiting List</button>
+    <a id="ioBtn" href="waiting-list-io.html"
+       style="flex-shrink:0;display:inline-flex;align-items:center;gap:.35rem;
+              padding:.9rem 1.1rem;background:rgba(79,192,212,.07);
+              border:1px dashed rgba(79,192,212,.4);border-radius:10px;
+              color:var(--blue);font-family:'DM Mono',monospace;font-size:.78rem;
+              font-weight:500;text-decoration:none;white-space:nowrap;
+              transition:all .2s;">
+      ⇅ Import / Export
+    </a>
+    <a href="special-workers.html"
+       style="flex-shrink:0;display:inline-flex;align-items:center;gap:.35rem;
+              padding:.9rem 1.1rem;background:rgba(167,139,250,.07);
+              border:1px dashed rgba(167,139,250,.4);border-radius:10px;
+              color:#a78bfa;font-family:'DM Mono',monospace;font-size:.78rem;
+              font-weight:500;text-decoration:none;white-space:nowrap;
+              transition:all .2s;">
+      ⭐ Special
+    </a>
+    <a id="sitesBtn" href="site-allocation.html"
+       style="flex-shrink:0;display:inline-flex;align-items:center;gap:.35rem;
+              padding:.9rem 1.1rem;background:rgba(232,184,75,.07);
+              border:1px dashed rgba(232,184,75,.4);border-radius:10px;
+              color:var(--gold);font-family:'DM Mono',monospace;font-size:.78rem;
+              font-weight:500;text-decoration:none;white-space:nowrap;">
+      📍 Sites
+    </a>
+
+    <a id="transferBtn" href="transfer-workers.html"
+       style="flex-shrink:0;display:inline-flex;align-items:center;gap:.35rem;
+              padding:.9rem 1.1rem;background:rgba(0,201,138,.07);
+              border:1px dashed rgba(0,201,138,.4);border-radius:10px;
+              color:var(--accent);font-family:'DM Mono',monospace;font-size:.78rem;
+              font-weight:500;text-decoration:none;white-space:nowrap;">
+      🔀 Transfer
+    </a>
+    <a id="auditBtn" href="audit-log.html"
+   style="flex-shrink:0;display:inline-flex;align-items:center;gap:.35rem;
+          padding:.9rem 1.1rem;background:rgba(240,96,96,.07);
+          border:1px dashed rgba(240,96,96,.4);border-radius:10px;
+          color:var(--red);font-family:'DM Mono',monospace;font-size:.78rem;
+          font-weight:500;text-decoration:none;white-space:nowrap;
+          transition:all .2s;">
+  📋 Audit
+</a>
+  </div>
+
+  <div class="section-label" id="listLabel">Workers</div>
+  <div id="workerList"></div>
+</div>
+
+<!-- ── Add / Edit Modal ── -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add Worker to Waiting List</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-project-banner" id="modalProjectBanner" style="display:none">
+        📌 <span>Registering under project:</span> <strong id="modalProjectName">—</strong>
+      </div>
+
+      <div class="autofill-box" id="autofillBox" style="display:none">
+        <h4>↩ Returning Worker Found!</h4>
+        <p id="autofillText"></p>
+      </div>
+      <div class="form-err" id="formErr"></div>
+
+      <!-- Omang — shown as input when adding, locked display when editing -->
+      <div class="form-group" id="omangInputGroup">
+        <label>Omang Number * (9 digits)</label>
+        <input type="text" id="f-omang" placeholder="123 456 789" maxlength="11" oninput="handleOmangInput(this)">
+        <div class="omang-hint" id="omangHint">Enter 9-digit Omang number</div>
+      </div>
+      <div class="form-group" id="omangLockedGroup" style="display:none">
+        <label>Omang Number (locked)</label>
+        <div class="omang-locked" id="omangLockedDisplay">—</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group"><label>Surname *</label><input type="text" id="f-surname" placeholder="Mokoena"></div>
+        <div class="form-group"><label>First Name *</label><input type="text" id="f-first" placeholder="Tebogo"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Date of Birth *</label><input type="text" id="f-dob" placeholder="YYYY-MM-DD"></div>
+        <div class="form-group"><label>Village *</label><input type="text" id="f-village" placeholder="Village name"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone (optional)</label><input type="tel" id="f-phone" placeholder="71234567" maxlength="8"></div>
+        <div class="form-group">
+          <label>Gender *</label>
+          <div class="chips-row" id="chips-sex">
+            <div class="fchip active" data-v="M" onclick="setChip('sex',this)">Male</div>
+            <div class="fchip"        data-v="F" onclick="setChip('sex',this)">Female</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mobile Money Provider *</label>
+        <div class="chips-row" id="chips-mmp">
+          <div class="fchip active" data-v="smega"  onclick="setChip('mmp',this)">Smega</div>
+          <div class="fchip"        data-v="orange" onclick="setChip('mmp',this)">Orange Money</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Qualification *</label>
+        <div class="chips-row" id="chips-qual">
+          <div class="fchip"        data-v="None"         onclick="setChip('qual',this)">None</div>
+          <div class="fchip"        data-v="Non-formal"   onclick="setChip('qual',this)">Non-formal</div>
+          <div class="fchip active" data-v="PSLE"         onclick="setChip('qual',this)">PSLE</div>
+          <div class="fchip"        data-v="JC"           onclick="setChip('qual',this)">JC</div>
+          <div class="fchip"        data-v="BGCSE"        onclick="setChip('qual',this)">BGCSE</div>
+          <div class="fchip"        data-v="Certificate"  onclick="setChip('qual',this)">Certificate</div>
+          <div class="fchip"        data-v="Diploma"      onclick="setChip('qual',this)">Diploma</div>
+          <div class="fchip"        data-v="Degree"       onclick="setChip('qual',this)">Degree</div>
+          <div class="fchip"        data-v="Master Degree" onclick="setChip('qual',this)">Master Degree</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="f-notes" placeholder="Any additional notes…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" id="saveBtn" onclick="saveWorker()">Add to List</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+
+let _list = [], _filter = 'all', _afCache = null, _omangTimer = null;
+let _projectName = null;
+let _editId = null;
+async function getCurrentUser() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return 'Unknown';
+
+  const { data: profile } = await sb
+    .from('profiles')
+    .select('display_name')
+    .eq('id', session.user.id)
+    .maybeSingle();
+
+  return profile?.display_name || session.user.email.split('@')[0];
+}
+let _projectMonth = null;
+let _projectYear  = null;
+
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+
+// ── Audit Log ─────────────────────────────────────────────────────────────
+async function logAudit(action, omang, name, details = {}) {
+  const performedBy = await getCurrentUser();
+  await sb.from('worker_audit_log').insert({
+    action,
+    worker_omang: omang,
+    worker_name:  name,
+    performed_by: performedBy,   // ← was hardcoded 'User'
+    details,
+    project_id:   PROJECT_ID || null,
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('backBtn').href =
+    PROJECT_ID ? `vdc-dashboard.html?project=${PROJECT_ID}` : 'vdc-dashboard.html';
+  document.getElementById('ioBtn').href =
+    PROJECT_ID ? `waiting-list-io.html?project=${PROJECT_ID}` : 'waiting-list-io.html';
+  document.getElementById('sitesBtn').href =
+    PROJECT_ID ? `site-allocation.html?project=${PROJECT_ID}` : 'site-allocation.html';
+  document.getElementById('transferBtn').href =
+    PROJECT_ID ? `transfer-workers.html?project=${PROJECT_ID}` : 'transfer-workers.html';
+
+  if (PROJECT_ID) await loadProjectContext();
+  await loadList();
+  document.getElementById('loadingScreen').style.display = 'none';
+}
+
+async function loadProjectContext() {
+  const { data, error } = await sb
+    .from('projects')
+    .select('project_name, month, year')
+    .eq('id', PROJECT_ID)
+    .single();
+
+  if (error || !data) return;
+
+  _projectName  = data.project_name;
+  _projectMonth = data.month || null;
+  _projectYear  = data.year  || null;
+
+  const period = [data.month, data.year].filter(Boolean).join(' ');
+
+  document.getElementById('projectStrip').style.display = 'flex';
+  document.getElementById('psName').textContent   = data.project_name;
+  document.getElementById('psPeriod').textContent = period ? `· ${period}` : '';
+  document.getElementById('psGlobalBadge').textContent           = 'Project List';
+  document.getElementById('psGlobalBadge').style.background         = 'rgba(0,201,138,.08)';
+  document.getElementById('psGlobalBadge').style.borderColor        = 'rgba(0,201,138,.2)';
+  document.getElementById('psGlobalBadge').style.color               = 'var(--accent)';
+  document.getElementById('headerSub').textContent =
+    `${data.project_name}${period ? ' — ' + period : ''} · Priority Queue`;
+  document.querySelector('.gn-icon').textContent = '📌';
+  document.getElementById('noticeText').innerHTML =
+    `Showing workers registered under <strong>${data.project_name}</strong> only. Workers added here will be linked to this project.`;
+  document.getElementById('globalNotice').style.background  = 'rgba(0,201,138,.05)';
+  document.getElementById('globalNotice').style.borderColor = 'rgba(0,201,138,.18)';
+  document.getElementById('globalNotice').style.color       = 'var(--accent)';
+}
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmtOmang(v){ const d=v.replace(/\D/g,'').substring(0,9);let o='';for(let i=0;i<d.length;i++){if(i&&i%3===0)o+=' ';o+=d[i];}return o; }
+function rawOmang(v){ return (v||'').replace(/\s/g,''); }
+function validOmang(v){ const r=rawOmang(v);return r.length===9&&/^\d{9}$/.test(r); }
+function genderFromOmang(v){ const r=rawOmang(v);if(r.length===9){const d=parseInt(r[4]);if(d===1)return'M';if(d===2)return'F';}return null; }
+function calcAge(dob){ if(!dob)return'?';const b=new Date(dob),t=new Date();let a=t.getFullYear()-b.getFullYear();if(t.getMonth()<b.getMonth()||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate()))a--;return isNaN(a)?'?':a; }
+
+function calcScore(w) {
+  // Use project month/year as reference; fall back to today
+  const refYear  = _projectYear  ? parseInt(_projectYear)  : new Date().getFullYear();
+  const refMonth = _projectMonth ? MONTH_NAMES.indexOf(_projectMonth) : new Date().getMonth();
+
+  // Never worked → High
+  if (!w.last_worked_date) return 150;
+
+  const lastDate = new Date(w.last_worked_date);
+  const gap = (refYear - lastDate.getFullYear()) * 12
+            + (refMonth - lastDate.getMonth());
+
+  if (gap <= 0) return 50;  // same month or future
+  if (gap === 1) return 100; // finished last month
+  return 150;                // gap ≥ 2 months or never worked
+}
+function priInfo(score) {
+  if (score >= 150) return { key:'high',    label:'High',     card:'p-high',   badge:'pb-high'  };
+  if (score >= 100) return { key:'low',     label:'Low',      card:'p-low',    badge:'pb-low'   };
+  return                   { key:'verylow', label:'Very Low', card:'p-low',    badge:'pb-low'   };
+}
+
+// ── Load ───────────────────────────────────────────────────────────────────
+async function loadList(){
+  let query = sb.from('waiting_list').select('*').order('position', { ascending: true });
+  if (PROJECT_ID) query = query.eq('project_id', PROJECT_ID);
+  const { data, error } = await query;
+  if (error) { showToast('Failed to load: ' + error.message, 'error'); return; }
+  _list = data || [];
+  renderList();
+}
+
+// ── Filter + Render ────────────────────────────────────────────────────────
+function setFilter(el){
+  document.querySelectorAll('.filter-chips .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active'); _filter = el.dataset.f; renderList();
+}
+
+function renderList(){
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+
+  // Full sorted list — used for real queue ranks
+  const fullSorted = _list
+    .map(w => ({ ...w, _s: calcScore(w), _p: priInfo(calcScore(w)) }))
+  .sort((a,b) => b._s - a._s || (a.position || 0) - (b.position || 0));
+  const rankMap = {};
+  fullSorted.forEach((w, i) => { rankMap[w.id] = i + 1; });
+
+  // Filtered view
+  const list = fullSorted.filter(w => {
+    const txt = `${w.first_name} ${w.surname} ${w.omang_number} ${w.village||''}`.toLowerCase();
+    if (q && !txt.includes(q)) return false;
+    if (_filter === 'all') return true;
+    if (_filter === 'returning') return !!w.is_returning_worker;
+    return w._p.key === _filter;
+  });
+
+ document.getElementById('stat-total').textContent    = fullSorted.length;
+document.getElementById('stat-veryhigh').textContent = fullSorted.filter(w => w._s === 150).length;
+document.getElementById('stat-high').textContent     = fullSorted.filter(w => w._s === 100).length;
+document.getElementById('listLabel').textContent     = `${list.length} worker${list.length !== 1 ? 's' : ''} shown`;
+
+  const el = document.getElementById('workerList');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state">${(q || _filter !== 'all') ? 'No workers match your search.' : 'No workers on the waiting list yet.'}</div>`;
+    return;
+  }
+
+  el.innerHTML = list.map((w) => {
+    const mmp     = w.mobile_money_provider === 'smega' ? 'Smega' : 'Orange Money';
+    const regDate = w.registered_date ? new Date(w.registered_date).toLocaleDateString('en-ZA') : '—';
+    const lastW   = w.last_worked_date ? new Date(w.last_worked_date).toLocaleDateString('en-ZA') : 'Never';
+    const rank    = rankMap[w.id];
+    return `<div class="worker-card ${w._p.card}">
+      <div class="card-top">
+        <span class="rank-badge">#${rank} of ${fullSorted.length}</span>
+        <span class="priority-badge ${w._p.badge}">${w._p.label}</span>
+        ${w.is_returning_worker ? '<span class="returning-badge">↩ Returning</span>' : ''}
+      </div>
+      <div class="worker-name">${w.first_name} ${w.surname}</div>
+      <div class="worker-detail">📍 <b>${w.village||'—'}</b></div>
+      <div class="worker-detail">🆔 <b>${fmtOmang(w.omang_number)}</b> &nbsp;·&nbsp; ${w.sex==='M'?'♂ Male':'♀ Female'} &nbsp;·&nbsp; Age: <b>${calcAge(w.date_of_birth)}</b></div>
+      <div class="worker-detail">📱 <b>${w.cellphone_number||'No phone'}</b> &nbsp;·&nbsp; 🎓 <b>${w.qualification}</b></div>
+      <div class="worker-detail">💰 <b>${mmp}</b></div>
+      <div class="worker-detail">📅 Last worked: <b>${lastW}</b></div>
+      <div class="worker-detail">📊 Employments: <b>${w.total_employments||0}</b> &nbsp;·&nbsp; Days worked: <b>${w.total_days_worked||0}</b></div>
+      <div class="worker-detail">⏰ Registered: <b>${regDate}</b> &nbsp;·&nbsp; Score: <b>${w._s}</b></div>
+      ${w.notes ? '<div class="worker-notes">📝 ' + w.notes + '</div>' : ''}
+      <div class="card-footer">
+        <button class="edit-pill" onclick="openEdit('${w.id}')">Edit</button>
+        <button class="remove-pill" onclick="removeWorker('${w.id}','${w.first_name} ${w.surname}')">Remove from List</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Remove ─────────────────────────────────────────────────────────────────
+async function removeWorker(id, name){
+  if (!confirm(`Remove ${name} from the waiting list?`)) return;
+  const removed = _list.find(x => x.id === id);
+  const { error } = await sb.from('waiting_list').delete().eq('id', id);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  await logAudit('removed', removed?.omang_number || '—', name, {});
+  showToast(`${name} removed from waiting list`);
+  await loadList();
+}
+
+// ── Modal — Add ────────────────────────────────────────────────────────────
+function openModal(){
+  _editId = null;
+  resetForm();
+  document.getElementById('omangInputGroup').style.display  = '';
+  document.getElementById('omangLockedGroup').style.display = 'none';
+  document.getElementById('modalTitle').textContent  = 'Add Worker to Waiting List';
+  document.getElementById('saveBtn').textContent     = 'Add to List';
+  if (PROJECT_ID && _projectName) {
+    document.getElementById('modalProjectBanner').style.display = 'flex';
+    document.getElementById('modalProjectName').textContent = _projectName;
+  }
+  document.getElementById('addModal').classList.add('open');
+}
+
+// ── Modal — Edit ───────────────────────────────────────────────────────────
+function openEdit(id){
+  const w = _list.find(x => x.id === id);
+  if (!w) return;
+  _editId = id;
+  resetForm();
+  document.getElementById('omangInputGroup').style.display  = 'none';
+  document.getElementById('omangLockedGroup').style.display = '';
+  document.getElementById('omangLockedDisplay').textContent = fmtOmang(w.omang_number);
+  document.getElementById('f-surname').value = w.surname           || '';
+  document.getElementById('f-first').value   = w.first_name        || '';
+  document.getElementById('f-dob').value     = w.date_of_birth     || '';
+  document.getElementById('f-village').value = w.village           || '';
+  document.getElementById('f-phone').value   = w.cellphone_number  || '';
+  document.getElementById('f-notes').value   = w.notes             || '';
+  if (w.sex)                   setChipVal('sex',  w.sex);
+  if (w.mobile_money_provider) setChipVal('mmp',  w.mobile_money_provider);
+  if (w.qualification)         setChipVal('qual', w.qualification);
+  document.getElementById('modalTitle').textContent = 'Edit Worker';
+  document.getElementById('saveBtn').textContent    = 'Save Changes';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('addModal').classList.remove('open');
+  _afCache = null; _editId = null;
+}
+
+function resetForm(){
+  ['f-surname','f-first','f-dob','f-village','f-phone','f-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-omang').value = '';
+  setChipVal('sex','M'); setChipVal('mmp','smega'); setChipVal('qual','PSLE');
+  document.getElementById('omangHint').textContent = 'Enter 9-digit Omang number';
+  document.getElementById('omangHint').className   = 'omang-hint';
+  document.getElementById('formErr').textContent   = '';
+  document.getElementById('autofillBox').style.display        = 'none';
+  document.getElementById('modalProjectBanner').style.display = 'none';
+  _afCache = null;
+}
+
+// ── Chip helpers ────────────────────────────────────────────────────────────
+function setChip(g, el){ document.querySelectorAll(`#chips-${g} .fchip`).forEach(c => c.classList.remove('active')); el.classList.add('active'); }
+function setChipVal(g, v){ document.querySelectorAll(`#chips-${g} .fchip`).forEach(c => c.classList.toggle('active', c.dataset.v === v)); }
+function getChip(g){ const a = document.querySelector(`#chips-${g} .fchip.active`); return a ? a.dataset.v : ''; }
+
+// ── Omang input ────────────────────────────────────────────────────────────
+function handleOmangInput(input){
+  input.value = fmtOmang(input.value);
+  const raw  = rawOmang(input.value);
+  const hint = document.getElementById('omangHint');
+  const g    = genderFromOmang(input.value);
+  if (g) setChipVal('sex', g);
+  if (raw.length < 9){ hint.textContent = `${raw.length}/9 digits`; hint.className = 'omang-hint'; document.getElementById('autofillBox').style.display = 'none'; return; }
+  if (!validOmang(input.value)){ hint.textContent = 'Invalid Omang'; hint.className = 'omang-hint invalid'; return; }
+  hint.textContent = '✓ Valid'; hint.className = 'omang-hint valid';
+  clearTimeout(_omangTimer);
+  _omangTimer = setTimeout(() => checkAutofill(raw), 700);
+}
+
+// ── Autofill ───────────────────────────────────────────────────────────────
+async function checkAutofill(omang){
+  const hint  = document.getElementById('omangHint');
+  const errEl = document.getElementById('formErr');
+  hint.textContent = 'Checking…'; hint.className = 'omang-hint checking';
+  errEl.textContent = '';
+  document.getElementById('autofillBox').style.display = 'none';
+
+  // Scoped duplicate check — only checks current project
+  let dupQuery = sb
+    .from('waiting_list').select('id,first_name,surname')
+    .eq('omang_number', omang);
+  if (PROJECT_ID) dupQuery = dupQuery.eq('project_id', PROJECT_ID);
+
+  const { data: existing } = await dupQuery.maybeSingle();
+  if (existing){
+    hint.textContent  = '⚠ Already in waiting list';
+    hint.className    = 'omang-hint invalid';
+    errEl.textContent = `${existing.first_name} ${existing.surname} is already on the waiting list.`;
+    return;
+  }
+
+  const { data: archiveRows } = await sb
+    .from('worker_archive').select('*')
+    .eq('omang_number', omang).order('archived_at', { ascending: false }).limit(1);
+  const fromArchive = archiveRows && archiveRows[0];
+
+  const { data: projArchRows } = await sb
+    .from('project_archive')
+    .select('omang_number,first_name,surname,date_of_birth,sex,cellphone_number,mobile_money_provider,qualification,last_worked_date,archived_at')
+    .eq('omang_number', omang).order('archived_at', { ascending: false }).limit(1);
+  const fromProjArch = projArchRows && projArchRows[0];
+
+  // Count distinct projects this worker has been employed in
+  const { data: empRows } = await sb
+    .from('project_archive')
+    .select('project_id')
+    .eq('omang_number', omang);
+
+  const totalEmployments = empRows
+    ? new Set(empRows.map(r => r.project_id)).size
+    : 0;
+
+  if (fromArchive || fromProjArch) {
+    // Compare dates across both sources — use whichever is more recent
+    const archiveDate  = fromArchive  && fromArchive.last_worked_date  ? new Date(fromArchive.last_worked_date)  : null;
+    const projArchDate = fromProjArch && fromProjArch.last_worked_date ? new Date(fromProjArch.last_worked_date) : null;
+
+    let lastWorked = null;
+    let dominantSource;
+    if (archiveDate && projArchDate) {
+      if (projArchDate > archiveDate) {
+        lastWorked = fromProjArch.last_worked_date;
+        dominantSource = 'project_archive';
+      } else {
+        lastWorked = fromArchive.last_worked_date;
+        dominantSource = 'worker_archive';
+      }
+    } else if (archiveDate) {
+      lastWorked = fromArchive.last_worked_date;
+      dominantSource = 'worker_archive';
+    } else if (projArchDate) {
+      lastWorked = fromProjArch.last_worked_date;
+      dominantSource = 'project_archive';
+    } else {
+      dominantSource = fromArchive ? 'worker_archive' : 'project_archive';
+    }
+
+    const base = fromArchive || fromProjArch;
+    _afCache = {
+      omang_number: omang, surname: base.surname||'', first_name: base.first_name||'',
+      date_of_birth: base.date_of_birth||'', village: base.village||'',
+      cellphone_number: base.cellphone_number||'', mobile_money_provider: base.mobile_money_provider||'smega',
+      sex: base.sex||'M', qualification: base.qualification||'PSLE',
+      last_worked_date: lastWorked,
+      total_days_worked: (fromArchive && fromArchive.total_days_worked)||0,
+      total_employments: totalEmployments,
+      _source: dominantSource,
+    };
+    fillForm(_afCache);
+    hint.textContent = dominantSource === 'worker_archive'
+      ? '↩ Found in worker archive — fields filled'
+      : '↩ Found in project history — fields filled';
+    hint.className = 'omang-hint valid';
+    const lastW = lastWorked ? new Date(lastWorked).toLocaleDateString('en-ZA') : 'No record';
+    document.getElementById('autofillText').innerHTML =
+      `<b>${_afCache.first_name} ${_afCache.surname}</b> · Last worked: <b>${lastW}</b> · Employments: <b>${totalEmployments}</b>`;
+    document.getElementById('autofillBox').style.display = 'block';
+    showToast(`${_afCache.first_name} ${_afCache.surname} — info loaded from archive ✓`, 'info');
+  } else {
+    _afCache = null;
+    hint.textContent = '✓ New worker — fill in details below';
+    hint.className   = 'omang-hint valid';
+  }
+}
+
+function fillForm(w){
+  document.getElementById('f-surname').value = w.surname       || '';
+  document.getElementById('f-first').value   = w.first_name    || '';
+  document.getElementById('f-dob').value     = w.date_of_birth || '';
+  document.getElementById('f-village').value = w.village       || '';
+  document.getElementById('f-phone').value   = w.cellphone_number || '';
+  if (w.sex)                   setChipVal('sex',  w.sex);
+  if (w.mobile_money_provider) setChipVal('mmp',  w.mobile_money_provider);
+  if (w.qualification)         setChipVal('qual', w.qualification);
+}
+
+// ── Save (insert or update) ────────────────────────────────────────────────
+// ── Save (insert or update) ────────────────────────────────────────────────
+async function saveWorker(){
+  const surname = document.getElementById('f-surname').value.trim();
+  const first   = document.getElementById('f-first').value.trim();
+  const dob     = document.getElementById('f-dob').value.trim();
+  const village = document.getElementById('f-village').value.trim();
+  const phone   = document.getElementById('f-phone').value.trim();
+  const errEl   = document.getElementById('formErr');
+  errEl.textContent = '';
+
+  if (!surname || !first) { errEl.textContent = 'First and last name are required.'; return; }
+  if (!dob)               { errEl.textContent = 'Date of birth is required.'; return; }
+  if (!village)           { errEl.textContent = 'Village is required.'; return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  if (_editId) {
+    // Phone uniqueness check for edit — exclude current record
+    if (phone) {
+      const editedWorker = _list.find(x => x.id === _editId);
+      const { data: phoneExists } = await sb
+        .from('waiting_list')
+        .select('id, first_name, surname')
+        .eq('cellphone_number', phone)
+        .neq('omang_number', editedWorker?.omang_number || '')
+        .maybeSingle();
+
+      if (phoneExists) {
+        errEl.textContent = `Phone already registered to ${phoneExists.first_name} ${phoneExists.surname}.`;
+        btn.disabled = false; btn.textContent = 'Save Changes';
+        return;
+      }
+    }
+
+    const payload = {
+      surname, first_name: first, date_of_birth: dob, village,
+      cellphone_number: phone || null, sex: getChip('sex'),
+      mobile_money_provider: getChip('mmp'), qualification: getChip('qual'),
+      notes: document.getElementById('f-notes').value.trim() || null,
+    };
+    const { error } = await sb.from('waiting_list').update(payload).eq('id', _editId);
+    btn.disabled = false; btn.textContent = 'Save Changes';
+    if (error) { errEl.textContent = 'Error: ' + error.message; return; }
+    const edited = _list.find(x => x.id === _editId);
+    await logAudit('updated', edited?.omang_number || '—', `${first} ${surname}`, { fields_edited: Object.keys(payload) });
+    closeModal();
+    showToast(`${first} ${surname} updated ✓`, 'success');
+
+  } else {
+    const omang = rawOmang(document.getElementById('f-omang').value);
+    if (!validOmang(omang)) { errEl.textContent = 'Omang number must be exactly 9 digits.'; btn.disabled = false; btn.textContent = 'Add to List'; return; }
+
+    // Final phone uniqueness guard for add
+    if (phone) {
+      const { data: phoneExists } = await sb
+        .from('waiting_list')
+        .select('id, first_name, surname')
+        .eq('cellphone_number', phone)
+        .neq('omang_number', omang)
+        .maybeSingle();
+
+      if (phoneExists) {
+        errEl.textContent = `Phone already registered to ${phoneExists.first_name} ${phoneExists.surname}.`;
+        btn.disabled = false; btn.textContent = 'Add to List';
+        return;
+      }
+    }
+
+    const af = _afCache || {};
+    const { data: maxPosRow } = await sb
+      .from('waiting_list')
+      .select('position')
+      .order('position', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextPosition = (maxPosRow?.position || 0) + 1;
+
+    const { error } = await sb.from('waiting_list').insert({
+      omang_number: omang, surname, first_name: first, date_of_birth: dob, village,
+      cellphone_number: phone || null, sex: getChip('sex'),
+      mobile_money_provider: getChip('mmp'), qualification: getChip('qual'),
+      notes: document.getElementById('f-notes').value.trim() || null,
+      is_returning_worker: !!_afCache, last_worked_date: af.last_worked_date||null,
+      total_days_worked: af.total_days_worked||0, total_employments: af.total_employments||0,
+      project_id: PROJECT_ID || null,
+      position: nextPosition,
+    });
+    btn.disabled = false; btn.textContent = 'Add to List';
+    if (error) { errEl.textContent = 'Error: ' + error.message; return; }
+    await logAudit('added', omang, `${first} ${surname}`, { is_returning: !!_afCache, village });
+    closeModal();
+    showToast(`${first} ${surname} added ✓`, 'success');
+  }
+
+  await loadList();
+}
+
+// ── Phone blur check ───────────────────────────────────────────────────────
+document.getElementById('f-phone').addEventListener('blur', async function(){
+  const phone = this.value.trim();
+  const omang = rawOmang(document.getElementById('f-omang').value);
+  const errEl = document.getElementById('formErr');
+  if (!phone) return;
+
+  // In edit mode, use the locked omang instead
+  let currentOmang = omang;
+  if (_editId) {
+    const editedWorker = _list.find(x => x.id === _editId);
+    currentOmang = editedWorker?.omang_number || '';
+  }
+
+  if (!currentOmang) return;
+
+  const { data: phoneExists } = await sb
+    .from('waiting_list')
+    .select('id, first_name, surname')
+    .eq('cellphone_number', phone)
+    .neq('omang_number', currentOmang)
+    .maybeSingle();
+
+  if (phoneExists) {
+    document.getElementById('f-phone').style.borderColor = 'var(--red)';
+    errEl.textContent = `Phone already registered to ${phoneExists.first_name} ${phoneExists.surname}.`;
+  } else {
+    document.getElementById('f-phone').style.borderColor = '';
+    errEl.textContent = '';
+  }
+});
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+init();
+
+</script>
+
+</body>
+</html>

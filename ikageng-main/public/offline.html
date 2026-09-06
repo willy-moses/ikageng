@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offline — Ikageng</title>
+<style>
+  body {
+    margin: 0; height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: .8rem;
+    background: #09100f; color: #dff0eb;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    text-align: center; padding: 2rem;
+  }
+  .icon { font-size: 2.6rem; }
+  h1 { font-size: 1.1rem; margin: 0; }
+  p { font-size: .85rem; color: #6b8c84; max-width: 320px; line-height: 1.6; margin: 0; }
+  button {
+    margin-top: .5rem; background: #00c98a; color: #001a10; border: none;
+    padding: .6rem 1.2rem; border-radius: 8px; font-size: .8rem;
+    font-weight: 600; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="icon">📡</div>
+  <h1>You're offline</h1>
+  <p>This page hasn't been loaded before, so it isn't available without a connection yet. Reconnect and try again.</p>
+  <button onclick="location.reload()">Retry</button>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Project Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;
+    --border:#1e2d28;--border2:#243830;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;
+    --text:#dff0eb;--muted:#6b8c84;--dim:#4d7068;
+    --green:#2c5530;--green2:#34623a;--green3:#3d6f44;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;display:flex;flex-direction:column;}
+
+  .header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 60%,var(--green3) 100%);padding:1.4rem 1.5rem 1.2rem;display:flex;align-items:center;gap:1rem;}
+  .header-text{flex:1;min-width:0;}
+  .header-text h1{font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.3rem);font-weight:700;color:#fff;line-height:1.2;}
+  .header-text p{font-size:.64rem;color:rgba(255,255,255,.75);margin-top:.18rem;letter-spacing:.04em;}
+  .back-pill{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.4rem .9rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.68rem;font-weight:500;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;flex-shrink:0;}
+  .back-pill:hover{background:rgba(255,255,255,.28);}
+
+  .body{flex:1;padding:1.4rem 1.5rem;max-width:520px;width:100%;margin:0 auto;}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.3rem 1.4rem;margin-bottom:1rem;}
+  .card-title{font-family:'Fraunces',serif;font-size:1.02rem;color:var(--text);margin-bottom:.3rem;}
+  .card-sub{font-size:.68rem;color:var(--muted);line-height:1.65;margin-bottom:1rem;}
+
+  .field-row{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem;}
+  .field-label{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);}
+  .field-value{font-size:.82rem;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;}
+
+  .date-input{
+    background:var(--s2);border:1px solid var(--border);border-radius:8px;
+    color:var(--text);font-family:'DM Mono',monospace;font-size:.82rem;
+    padding:.6rem .8rem;outline:none;transition:border-color .15s;width:100%;
+    color-scheme:dark;
+  }
+  .date-input:focus{border-color:var(--accent);}
+
+  .hint{font-size:.62rem;color:var(--dim);line-height:1.6;margin-top:.5rem;}
+  .hint b{color:var(--gold);}
+
+  .save-btn{
+    background:var(--accent);border:none;color:#001a10;font-family:'DM Mono',monospace;
+    font-size:.76rem;font-weight:500;padding:.7rem 1.2rem;border-radius:9px;cursor:pointer;
+    transition:opacity .15s;width:100%;margin-top:.3rem;
+  }
+  .save-btn:hover{opacity:.88;}
+  .save-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  .status-badge{
+    display:none;align-items:center;gap:.4rem;font-size:.66rem;
+    border-radius:8px;padding:.5rem .75rem;margin-bottom:1rem;line-height:1.5;
+  }
+  .status-badge.visible{display:flex;}
+  .status-badge.set{color:var(--accent);background:rgba(0,201,138,.08);border:1px solid rgba(0,201,138,.22);}
+  .status-badge.unset{color:var(--gold);background:rgba(232,184,75,.08);border:1px solid rgba(232,184,75,.22);}
+
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;font-size:.7rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:280px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  .loading-txt{font-size:.72rem;color:var(--muted);text-align:center;padding:2rem;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-pill" onclick="goBack()">← Dashboard</button>
+  <div class="header-text">
+    <h1>Project Settings</h1>
+    <p>Set the actual hire date for this project</p>
+  </div>
+</div>
+
+<div class="body" id="bodyContent">
+  <div class="loading-txt">Loading project…</div>
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+
+function goBack(){
+  window.location.href = PROJECT_ID ? `vdc-dashboard.html?project=${PROJECT_ID}` : 'vdc-dashboard.html';
+}
+
+function showToast(msg, type='success'){
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3200);
+}
+
+async function loadProject(){
+  if(!PROJECT_ID){
+    document.getElementById('bodyContent').innerHTML = `
+      <div class="card"><div class="card-title">No project selected</div>
+      <div class="card-sub">Open this page from a project's dashboard.</div></div>`;
+    return;
+  }
+
+  const { data: project, error } = await sb.from('projects').select('*').eq('id', PROJECT_ID).single();
+  if(error || !project){
+    document.getElementById('bodyContent').innerHTML = `
+      <div class="card"><div class="card-title">Project not found</div>
+      <div class="card-sub">Could not load this project. Go back and try again.</div></div>`;
+    return;
+  }
+
+  const period = [project.month, project.year].filter(Boolean).join(' ');
+  const hasDate = !!project.hire_date;
+
+  document.getElementById('bodyContent').innerHTML = `
+    <div class="status-badge ${hasDate ? 'set' : 'unset'} visible">
+      ${hasDate
+        ? `✓ Hire date is set for this project`
+        : `⚠ No hire date set yet — "last hired" may show inaccurate data until this is set`}
+    </div>
+
+    <div class="card">
+      <div class="card-title">${project.project_name || 'Project'}</div>
+      <div class="card-sub">${period || '—'}</div>
+
+      <div class="field-row">
+        <div class="field-label">Project</div>
+        <div class="field-value">${project.project_name || '—'}</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-label">Hire date</div>
+        <input type="date" class="date-input" id="hireDateInput" value="${project.hire_date || ''}">
+        <div class="hint">
+          Set this to the actual day workers were <b>hired</b> for this project —
+          not the day you entered them into the system. This is the date that will be
+          used everywhere as "last hired" once the project is archived, for every
+          member in this project.
+        </div>
+      </div>
+
+      <button class="save-btn" id="saveBtn" onclick="saveHireDate()">Save hire date</button>
+    </div>
+  `;
+}
+
+async function saveHireDate(){
+  const input = document.getElementById('hireDateInput');
+  const btn   = document.getElementById('saveBtn');
+  const val   = input.value;
+
+  if(!val){
+    showToast('Please choose a date', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const { error } = await sb.from('projects')
+      .update({ hire_date: val })
+      .eq('id', PROJECT_ID);
+    if(error) throw error;
+    showToast('Hire date saved');
+    await loadProject();
+  } catch(e){
+    console.error('Save failed:', e);
+    showToast('Save failed: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Save hire date';
+  }
+}
+
+loadProject();
+</script>
+</body>
+</html>

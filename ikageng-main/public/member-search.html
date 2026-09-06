@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Search</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;--accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;--purple:#9466c4;--text:#dff0eb;--muted:#6b8c84;--green:#2c5530;--sup:#d4a574;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
+
+  .simple-header{background:var(--green);padding:1.2rem 1.5rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:10;}
+  .back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.42rem 1rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;transition:background .15s;flex-shrink:0;}
+  .back-btn:hover{background:rgba(255,255,255,.28);}
+  .header-text{display:flex;flex-direction:column;gap:.15rem;flex:1;}
+  .simple-header h1{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:700;color:#fff;}
+  .header-project{font-size:.62rem;color:rgba(255,255,255,.6);letter-spacing:.1em;text-transform:uppercase;}
+
+  .scroll-body{padding:1.5rem;max-width:680px;margin:0 auto;}
+
+  .no-project-warning{background:rgba(240,96,96,.08);border:1px solid rgba(240,96,96,.3);border-left:3px solid var(--red);border-radius:8px;padding:.85rem 1.1rem;margin-bottom:1.2rem;font-size:.78rem;color:var(--red);}
+
+  .search-box{position:relative;margin-bottom:1rem;}
+  .search-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.85rem;padding:.85rem 1rem .85rem 2.6rem;border-radius:10px;outline:none;transition:border-color .15s;}
+  .search-input:focus{border-color:var(--accent);}
+  .search-input::placeholder{color:var(--muted);}
+  .search-icon{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.95rem;}
+  .search-clear{position:absolute;right:.9rem;top:50%;transform:translateY(-50%);color:var(--muted);background:none;border:none;font-size:.95rem;cursor:pointer;display:none;}
+  .search-clear:hover{color:var(--red);}
+
+  .filter-row{display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap;}
+  .filter-chip{padding:.4rem .9rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.68rem;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;}
+  .filter-chip:hover{border-color:var(--accent);color:var(--text);}
+  .filter-chip.active{background:var(--green);border-color:var(--accent);color:var(--accent);font-weight:500;}
+
+  .result-count{font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.7rem;}
+
+  .result-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:10px;padding:.95rem 1.1rem;margin-bottom:.6rem;cursor:pointer;display:flex;align-items:center;gap:.9rem;transition:border-color .2s,background .2s,transform .1s;}
+  .result-card:hover{border-color:var(--accent);background:var(--s2);transform:translateY(-1px);}
+  .result-card:active{transform:scale(.99);}
+  .result-card.waiting{border-left-color:var(--gold);}
+  .result-card.supervisor{border-left-color:var(--sup);}
+
+  .result-info{flex:1;min-width:0;}
+  .result-name-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem;}
+  .result-name{font-size:.86rem;font-weight:500;color:var(--text);}
+  .badge{font-size:.5rem;padding:.14rem .55rem;border-radius:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:500;}
+  .badge-active{background:rgba(0,201,138,.12);color:var(--accent);border:1px solid rgba(0,201,138,.25);}
+  .badge-waiting{background:rgba(232,184,75,.12);color:var(--gold);border:1px solid rgba(232,184,75,.25);}
+  .badge-sup{background:rgba(212,165,116,.15);color:var(--sup);border:1px solid rgba(212,165,116,.3);}
+
+  .result-detail{font-size:.64rem;color:var(--muted);line-height:1.7;}
+  .result-detail b{color:var(--text);font-weight:400;}
+  .result-chevron{color:var(--muted);font-size:1rem;flex-shrink:0;}
+
+  .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.78rem;font-style:italic;line-height:1.8;}
+  .empty-state .big{font-size:1.8rem;margin-bottom:.5rem;display:block;}
+
+  .loading-row{text-align:center;padding:2rem;color:var(--muted);font-size:.75rem;}
+  .spinner-sm{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;margin:0 auto .6rem;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1.1rem;font-size:.72rem;color:var(--text);z-index:999;animation:fadeIn .2s ease;max-width:300px;line-height:1.5;}
+  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+
+<div class="simple-header">
+  <button class="back-btn" onclick="goBack()">← Back</button>
+  <div class="header-text">
+    <h1>Search</h1>
+    <div class="header-project" id="headerProjectLabel">Loading project…</div>
+  </div>
+</div>
+
+<div class="scroll-body">
+
+  <div class="no-project-warning" id="noProjectWarning" style="display:none">
+    ⚠ No project selected. Go back and open a project first.
+  </div>
+
+  <div id="searchUI" style="display:none">
+    <div class="search-box">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" id="searchInput" placeholder="Search by name, omang, group or location…" oninput="onSearchInput()">
+      <button class="search-clear" id="clearBtn" onclick="clearSearch()">✕</button>
+    </div>
+
+    <div class="filter-row">
+      <div class="filter-chip active" data-f="all" onclick="setFilter('all',this)">All</div>
+      <div class="filter-chip" data-f="active" onclick="setFilter('active',this)">Active members</div>
+      <div class="filter-chip" data-f="waiting" onclick="setFilter('waiting',this)">Waiting list</div>
+    </div>
+
+    <div class="result-count" id="resultCount"></div>
+    <div id="resultsList"></div>
+  </div>
+
+</div>
+
+<script>
+const SUPA_URL='https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const urlParams  = new URLSearchParams(window.location.search);
+const PROJECT_ID = urlParams.get('project');
+
+let _activeRecords = [];   // active members joined w/ group info
+let _waitingRecords = [];  // waiting list entries
+let _filter = 'all';
+let _debounceTimer = null;
+
+function goBack() {
+  if (PROJECT_ID) window.location.href = `vdc-dashboard.html?project=${PROJECT_ID}`;
+  else window.location.href = 'index.html';
+}
+
+function showToast(msg, type = 'error') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+async function init() {
+  if (!PROJECT_ID) {
+    document.getElementById('noProjectWarning').style.display = 'block';
+    document.getElementById('headerProjectLabel').textContent = 'No project selected';
+    return;
+  }
+
+  const { data: proj } = await sb.from('projects').select('project_name, month, year').eq('id', PROJECT_ID).single();
+  document.getElementById('headerProjectLabel').textContent = proj
+    ? `${proj.project_name} · ${proj.month} ${proj.year}`
+    : 'Project not found';
+
+  document.getElementById('searchUI').style.display = 'block';
+  document.getElementById('resultsList').innerHTML = `<div class="loading-row"><div class="spinner-sm"></div>Loading members…</div>`;
+
+  await loadAllRecords();
+  render();
+}
+
+async function loadAllRecords() {
+  // Groups for this project
+  const { data: groups, error: gErr } = await sb
+    .from('groups')
+    .select('id, group_name, location')
+    .eq('project_id', PROJECT_ID);
+  if (gErr) { showToast('Failed to load groups: ' + gErr.message); return; }
+
+  const groupMap = {};
+  (groups || []).forEach(g => { groupMap[g.id] = g; });
+  const groupIds = (groups || []).map(g => g.id);
+
+  // Active members across those groups
+  let members = [];
+  if (groupIds.length) {
+    const { data, error } = await sb
+      .from('members')
+      .select('id, group_id, first_name, surname, omang_number, cellphone_number, sex, qualification, is_supervisor, position')
+      .in('group_id', groupIds);
+    if (error) showToast('Failed to load members: ' + error.message);
+    members = data || [];
+  }
+
+  _activeRecords = members.map(m => ({
+    type: 'active',
+    id: m.id,
+    group_id: m.group_id,
+    name: `${m.first_name} ${m.surname}`,
+    omang: m.omang_number,
+    phone: m.cellphone_number,
+    qualification: m.qualification,
+    is_supervisor: m.is_supervisor,
+    group_name: groupMap[m.group_id]?.group_name || 'Unknown group',
+    location: groupMap[m.group_id]?.location || ''
+  }));
+
+  // Waiting list for this project
+  const { data: waiting, error: wErr } = await sb
+    .from('waiting_list')
+    .select('*')
+    .eq('project_id', PROJECT_ID);
+  if (wErr) showToast('Failed to load waiting list: ' + wErr.message);
+
+  _waitingRecords = (waiting || []).map(w => ({
+    type: 'waiting',
+    id: w.id,
+    name: `${w.first_name || ''} ${w.surname || ''}`.trim(),
+    omang: w.omang_number,
+    phone: w.cellphone_number,
+    qualification: w.qualification,
+    location: w.location || w.village || ''
+  }));
+}
+
+function setFilter(f, el) {
+  _filter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function onSearchInput() {
+  const val = document.getElementById('searchInput').value;
+  document.getElementById('clearBtn').style.display = val ? 'block' : 'none';
+  clearTimeout(_debounceTimer);
+  _debounceTimer = setTimeout(render, 150);
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('clearBtn').style.display = 'none';
+  render();
+}
+
+function matches(record, q) {
+  if (!q) return true;
+  const haystack = [
+    record.name, record.omang, record.phone, record.group_name,
+    record.location, record.qualification
+  ].filter(Boolean).join(' ').toLowerCase();
+  return haystack.includes(q);
+}
+
+function render() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+
+  let pool = [];
+  if (_filter === 'all')      pool = [..._activeRecords, ..._waitingRecords];
+  else if (_filter === 'active')  pool = _activeRecords;
+  else if (_filter === 'waiting') pool = _waitingRecords;
+
+  const results = pool.filter(r => matches(r, q));
+
+  document.getElementById('resultCount').textContent =
+    q || _filter !== 'all'
+      ? `${results.length} result${results.length === 1 ? '' : 's'}`
+      : `${results.length} total · type to search`;
+
+  const list = document.getElementById('resultsList');
+
+  if (!results.length) {
+    list.innerHTML = `<div class="empty-state"><span class="big">🔍</span>No matches found.<br>Try a different name, omang, or group.</div>`;
+    return;
+  }
+
+  list.innerHTML = results.map(r => {
+    if (r.type === 'active') {
+      return `<div class="result-card ${r.is_supervisor ? 'supervisor' : ''}" onclick="goToGroup('${r.group_id}')">
+        <div class="result-info">
+          <div class="result-name-row">
+            <span class="result-name">${escapeHtml(r.name)}</span>
+            <span class="badge badge-active">Active</span>
+            ${r.is_supervisor ? `<span class="badge badge-sup">Supervisor</span>` : ''}
+          </div>
+          <div class="result-detail"><b>${escapeHtml(r.group_name)}</b> &nbsp;·&nbsp; ${escapeHtml(r.location)}</div>
+          <div class="result-detail">Omang: ${escapeHtml(r.omang || '—')} &nbsp;·&nbsp; ${escapeHtml(r.qualification || '—')}</div>
+        </div>
+        <div class="result-chevron">›</div>
+      </div>`;
+    } else {
+      return `<div class="result-card waiting" onclick="goToWaiting()">
+        <div class="result-info">
+          <div class="result-name-row">
+            <span class="result-name">${escapeHtml(r.name || 'Unnamed')}</span>
+            <span class="badge badge-waiting">Waiting list</span>
+          </div>
+          <div class="result-detail">${escapeHtml(r.location || 'No location on file')}</div>
+          <div class="result-detail">Omang: ${escapeHtml(r.omang || '—')} &nbsp;·&nbsp; ${escapeHtml(r.qualification || '—')}</div>
+        </div>
+        <div class="result-chevron">›</div>
+      </div>`;
+    }
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function goToGroup(groupId) {
+  window.location.href = `manage-groups.html?project=${PROJECT_ID}&openGroup=${groupId}`;
+}
+
+function goToWaiting() {
+  window.location.href = `waitinglist.html?project=${PROJECT_ID}`;
+}
+
+init();
+</script>
+</body>
+</html>

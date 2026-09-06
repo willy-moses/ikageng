@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Ikageng — Attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  :root {
+    --bg:      #09100f;
+    --surface: #111a18;
+    --s2:      #18241f;
+    --border:  #1e2d28;
+    --accent:  #00c98a;
+    --gold:    #e8b84b;
+    --blue:    #4fc0d4;
+    --red:     #f06060;
+    --purple:  #9466c4;
+    --text:    #dff0eb;
+    --muted:   #6b8c84;
+    --dim:     #4d7068;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; overflow-x: hidden; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .loading-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .9rem; z-index: 100;
+  }
+  .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-txt { font-size: .75rem; color: var(--muted); letter-spacing: .1em; }
+
+  /* ── SIMPLE HEADER (full-page pattern) ── */
+  .page-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    position: sticky; top: 0; z-index: 20;
+    flex-wrap: wrap;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 14px; border-radius: 20px; font-family: 'DM Mono', monospace; font-size: 11.5px;
+    cursor: pointer; flex-shrink: 0; transition: background .15s, border-color .15s, color .15s;
+    text-decoration: none;
+  }
+  .back-btn:hover { background: rgba(0,201,138,.12); border-color: rgba(0,201,138,.4); color: var(--accent); }
+  .back-btn i { font-size: 15px; flex-shrink: 0; }
+
+  .page-title-block { display: flex; flex-direction: column; min-width: 0; }
+  .page-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .page-subtitle { font-size: 10px; color: var(--dim); margin-top: 1px; }
+
+  .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .topbar-ward {
+    font-size: 10px; background: rgba(232,184,75,.12); color: var(--gold); border: 1px solid rgba(232,184,75,.28);
+    border-radius: 20px; padding: 4px 11px; letter-spacing: .05em; font-weight: 500; white-space: nowrap;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .topbar-ward i { font-size: 11px; flex-shrink: 0; }
+  .topbar-tag {
+    font-size: 10px; background: rgba(0,201,138,.12); color: var(--accent); border: 1px solid rgba(0,201,138,.25);
+    border-radius: 20px; padding: 4px 11px; letter-spacing: .07em; white-space: nowrap;
+  }
+
+  /* ── PAGE BODY (natural scroll, full width) ── */
+  .page-body {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 18px 20px 40px;
+  }
+
+  .section {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .section-title { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+
+  .period-line { font-size: 11.5px; color: var(--muted); margin-bottom: 3px; }
+  .period-line b { color: var(--text); font-weight: 500; }
+  .empty-note {
+    font-size: 11.5px; color: var(--red); background: rgba(240,96,96,.08);
+    border: 1px solid rgba(240,96,96,.25); border-radius: 8px; padding: 12px; text-align: center;
+  }
+
+  .group-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .group-scroll::-webkit-scrollbar { height: 4px; }
+  .group-tab {
+    flex-shrink: 0; background: var(--s2); border: 1px solid var(--border); border-radius: 9px;
+    padding: 9px 14px; cursor: pointer; text-align: center; min-width: 120px;
+    transition: border-color .15s, background .15s;
+  }
+  .group-tab:hover { border-color: rgba(0,201,138,.3); }
+  .group-tab.active { border-color: var(--accent); background: rgba(0,201,138,.08); }
+  .group-tab-name { font-size: 12px; font-weight: 500; color: var(--text); }
+  .group-tab.active .group-tab-name { color: var(--accent); }
+  .group-tab-count { font-size: 9.5px; color: var(--dim); margin-top: 3px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 12px; }
+  .stat-card { background: var(--s2); border: 1px solid var(--border); border-radius: 9px; padding: 11px 6px; text-align: center; }
+  .stat-num { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat-lbl { font-size: 8.5px; color: var(--dim); margin-top: 4px; letter-spacing: .07em; text-transform: uppercase; }
+
+  .supervisor-note { font-size: 10.5px; color: var(--gold); font-style: italic; margin-top: 8px; }
+  .instruction-note {
+    font-size: 10.5px; color: var(--muted); background: var(--s2); border-radius: 8px;
+    padding: 8px 10px; margin-top: 10px;
+  }
+
+  .bulk-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px; }
+  .bulk-day { flex-shrink: 0; text-align: center; }
+  .bulk-day-lbl { font-size: 9px; color: var(--dim); margin-bottom: 4px; font-weight: 600; }
+  .bulk-btns { display: flex; flex-direction: column; gap: 3px; }
+  .bulk-btn {
+    border: none; border-radius: 5px; font-size: 8.5px; font-weight: 700; padding: 3px 8px;
+    color: #001a10; cursor: pointer; font-family: 'DM Mono', monospace;
+  }
+  .bulk-btn.present { background: var(--accent); }
+  .bulk-btn.clear { background: var(--red); color: #2a0a0a; }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+  table.att { border-collapse: collapse; width: max-content; }
+  table.att th, table.att td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  table.att thead th {
+    background: #0d1714; color: var(--dim); font-size: 9.5px; font-weight: 600; padding: 8px 4px;
+    position: sticky; top: 0; z-index: 2;
+  }
+  table.att thead th.name-col { text-align: left; padding-left: 12px; min-width: 190px; position: sticky; left: 0; z-index: 3; }
+  table.att td.name-col {
+    position: sticky; left: 0; background: var(--surface); z-index: 1; padding: 8px 12px; min-width: 190px;
+  }
+  table.att tr.supervisor-row td.name-col { background: #1a1510; }
+  .day-cell { width: 32px; height: 42px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--dim); }
+  .day-cell:hover { background: rgba(255,255,255,.03); }
+  .day-cell.present { background: rgba(0,201,138,.14); color: var(--accent); }
+  .day-cell.absent  { background: rgba(240,96,96,.14); color: var(--red); }
+  .worker-name { font-size: 12px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .sup-badge { background: var(--gold); color: #2a1f00; font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
+  .worker-sub { font-size: 9.5px; color: var(--dim); margin-top: 2px; }
+  .worker-stats { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+  .legend-row { display: flex; gap: 18px; margin-top: 14px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--muted); }
+  .legend-box { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--s2); border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem 1rem; font-size: .72rem; color: var(--text); z-index: 999;
+    animation: fadeUp .2s ease; max-width: 260px; line-height: 1.5;
+  }
+  .toast.success { border-color: rgba(0,201,138,.4); color: var(--accent); }
+  .toast.error   { border-color: rgba(240,96,96,.4);  color: var(--red); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+
+  @media (max-width: 700px) {
+    .page-header { padding: 10px 12px; }
+    .page-title { font-size: 15px; }
+    .back-btn span { display: none; }
+    .back-btn { padding: 7px 9px; }
+    .topbar-ward { font-size: 9px; padding: 3px 9px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+    .page-body { padding: 14px 12px 32px; }
+    .stats-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-txt">Loading attendance…</div>
+</div>
+
+<div id="pageRoot" style="display:none">
+
+  <div class="page-header">
+    <div class="header-left">
+      <a class="back-btn" onclick="goBack()" href="#"><i class="ti ti-arrow-left"></i><span>Back</span></a>
+      <div class="page-title-block">
+        <div class="page-title">Attendance</div>
+        <div class="page-subtitle" id="sb-period"></div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="topbar-ward" id="topbar-ward"><i class="ti ti-map-pin"></i><span id="topbar-ward-text">—</span></span>
+      <span class="topbar-tag" id="topbar-tag">—</span>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <div class="section">
+      <div class="section-title">Project Period</div>
+      <div id="periodBlock">
+        <div class="period-line">Loading…</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Select Group</div>
+      <div class="group-scroll" id="groupScroll"></div>
+      <div id="noGroupsNote" style="display:none" class="empty-note">No groups found for this project.</div>
+    </div>
+
+    <div id="groupContent" style="display:none">
+      <div class="section">
+        <div class="section-title" id="groupHeading">—</div>
+        <div class="instruction-note">Tap a day cell once for ✓ Present, twice for ✗ Absent, three times to clear.</div>
+        <div class="supervisor-note" id="supervisorNote" style="display:none"></div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-num" id="stat-days">0</div><div class="stat-lbl">Days recorded</div></div>
+          <div class="stat-card"><div class="stat-num" id="stat-present">0</div><div class="stat-lbl">Total present</div></div>
+          <div class="stat-card"><div class="stat-num" id="stat-absent">0</div><div class="stat-lbl">Total absent</div></div>
+          <div class="stat-card"><div class="stat-num" id="stat-workers">0</div><div class="stat-lbl">Total workers</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title" style="font-size:12px">Quick actions</div>
+        <div class="bulk-scroll" id="bulkScroll"></div>
+      </div>
+
+      <div class="section">
+        <div class="table-scroll">
+          <table class="att" id="attTable"></table>
+        </div>
+        <div class="legend-row">
+          <div class="legend-item"><span class="legend-box" style="background:rgba(0,201,138,.14);color:var(--accent)">✓</span>Present</div>
+          <div class="legend-item"><span class="legend-box" style="background:rgba(240,96,96,.14);color:var(--red)">✗</span>Absent</div>
+          <div class="legend-item"><span class="legend-box"></span>Not marked</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="noWorkersNote" style="display:none" class="section">
+      <div class="empty-note">No workers in this group yet. Add workers under Manage first.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+  const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+  const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+  if (!PROJECT_ID) window.location.replace('site-allocation.html');
+
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const MONTH_MAP = { january:1,jan:1,february:2,feb:2,march:3,mar:3,april:4,apr:4,may:5,june:6,jun:6,july:7,jul:7,
+    august:8,aug:8,september:9,sep:9,sept:9,october:10,oct:10,november:11,nov:11,december:12,dec:12 };
+
+  let project = null, wardInfo = null, groups = [], selectedGroup = null;
+  let workers = [], attendance = {}; // attendance[dateKey][member_id] = 'present'|'absent'
+  const DISPLAY_DAYS = 31; // every month always shows and stores 31 day-slots
+  let attYear, attMonth, daysInMonth;
+
+  function monthNumber(m) {
+    if (!m) return new Date().getMonth() + 1;
+    if (!isNaN(m)) return parseInt(m);
+    return MONTH_MAP[String(m).toLowerCase().trim()] || new Date().getMonth() + 1;
+  }
+  function dateKey(y, m, d) { return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+  function showToast(msg, type) {
+    type = type || 'success';
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  function goBack() {
+    window.location.href = PROJECT_ID ? `vdc-dashboard.html?project=${PROJECT_ID}` : 'vdc-dashboard.html';
+  }
+
+  async function loadProject() {
+    const { data, error } = await sb.from('projects').select('*').eq('id', PROJECT_ID).single();
+    if (error || !data) { showToast('Project not found', 'error'); setTimeout(()=>location.replace('index.html'), 1500); return null; }
+    return data;
+  }
+  async function loadWardInfo(wardId) {
+    if (!wardId) return null;
+    const { data } = await sb.from('wards').select('ward_name, logo_url').eq('id', wardId).single();
+    return data || null;
+  }
+  async function loadGroups() {
+    const { data } = await sb.from('groups').select('*').eq('project_id', PROJECT_ID).order('created_at', { ascending: true });
+    return data || [];
+  }
+  async function loadWorkers(groupId) {
+    const { data } = await sb.from('members').select('*').eq('group_id', groupId).order('created_at', { ascending: true });
+    return data || [];
+  }
+  async function loadAttendanceForMonth() {
+    const from = dateKey(attYear, attMonth, 1);
+    const to = dateKey(attYear, attMonth, daysInMonth);
+    const { data } = await sb.from('attendance')
+      .select('member_id, attendance_date, status')
+      .eq('project_id', PROJECT_ID)
+      .eq('group_id', selectedGroup.id)
+      .gte('attendance_date', from)
+      .lte('attendance_date', to);
+    const map = {};
+    (data || []).forEach(r => {
+      if (!map[r.attendance_date]) map[r.attendance_date] = {};
+      map[r.attendance_date][r.member_id] = r.status;
+    });
+    return map;
+  }
+
+  function sortedWorkers() {
+    return [...workers].sort((a, b) => {
+      if (a.is_supervisor && !b.is_supervisor) return -1;
+      if (!a.is_supervisor && b.is_supervisor) return 1;
+      return new Date(a.created_at) - new Date(b.created_at);
+    });
+  }
+
+  function renderHeader() {
+    const wardName = wardInfo?.ward_name || 'Ward';
+    const displayName = wardName.toLowerCase().endsWith('ward') ? wardName : wardName + ' Ward';
+    document.getElementById('sb-period').textContent = [project.month, project.year].filter(Boolean).join(' ') || 'Ikageng';
+    document.getElementById('topbar-ward-text').textContent = displayName;
+    document.getElementById('topbar-tag').textContent = (project.project_name || 'Project').toUpperCase();
+  }
+
+  function renderPeriod() {
+    const el = document.getElementById('periodBlock');
+    if (!selectedGroup) { el.innerHTML = `<div class="period-line">Select a group to view project details.</div>`; return; }
+    el.innerHTML = `
+      <div class="period-line"><b>Project:</b> ${selectedGroup.project || 'Not specified'}</div>
+      <div class="period-line"><b>Location:</b> ${selectedGroup.location || 'Not specified'}</div>
+      <div class="period-line"><b>Period:</b> ${MONTH_NAMES[attMonth-1]} ${attYear}</div>
+    `;
+  }
+
+  function renderGroupTabs() {
+    const wrap = document.getElementById('groupScroll');
+    wrap.innerHTML = '';
+    document.getElementById('noGroupsNote').style.display = groups.length ? 'none' : 'block';
+    groups.forEach(g => {
+      const div = document.createElement('div');
+      div.className = 'group-tab' + (selectedGroup?.id === g.id ? ' active' : '');
+      div.innerHTML = `<div class="group-tab-name">${g.group_name}</div><div class="group-tab-count">${g.location || ''}</div>`;
+      div.onclick = () => selectGroup(g);
+      wrap.appendChild(div);
+    });
+  }
+
+  async function selectGroup(g) {
+    selectedGroup = g;
+    renderGroupTabs();
+    renderPeriod();
+    document.getElementById('loadingScreen').style.display = 'flex';
+    workers = await loadWorkers(g.id);
+    attendance = await loadAttendanceForMonth();
+    document.getElementById('loadingScreen').style.display = 'none';
+    renderGroupSection();
+  }
+
+  function statusFor(memberId, day) {
+    const key = dateKey(attYear, attMonth, day);
+    return attendance[key]?.[memberId] || null;
+  }
+
+  function computeStats() {
+    let daysWithRecords = 0, present = 0, absent = 0;
+    Object.values(attendance).forEach(day => {
+      if (Object.keys(day).length) daysWithRecords++;
+      Object.values(day).forEach(s => { if (s === 'present') present++; else if (s === 'absent') absent++; });
+    });
+    return { daysWithRecords, present, absent, totalWorkers: workers.length };
+  }
+
+  function workerStats(memberId) {
+    let present = 0, absent = 0, total = 0;
+    Object.values(attendance).forEach(day => {
+      if (day[memberId]) {
+        total++;
+        if (day[memberId] === 'present') present++; else if (day[memberId] === 'absent') absent++;
+      }
+    });
+    const rate = total > 0 ? ((present/total)*100).toFixed(1) : '0.0';
+    return { present, absent, rate };
+  }
+
+  function renderBulkActions() {
+    const wrap = document.getElementById('bulkScroll');
+    wrap.innerHTML = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const div = document.createElement('div');
+      div.className = 'bulk-day';
+      div.innerHTML = `
+        <div class="bulk-day-lbl">Day ${d}</div>
+        <div class="bulk-btns">
+          <button class="bulk-btn present">All ✓</button>
+          <button class="bulk-btn clear">Clear</button>
+        </div>`;
+      div.querySelector('.present').onclick = () => bulkMarkAllPresent(d);
+      div.querySelector('.clear').onclick = () => clearDayAttendance(d);
+      wrap.appendChild(div);
+    }
+  }
+
+  function renderTable() {
+    const table = document.getElementById('attTable');
+    const sw = sortedWorkers();
+    let thead = `<thead><tr><th class="name-col">Worker</th>`;
+    for (let d = 1; d <= daysInMonth; d++) thead += `<th>${d}</th>`;
+    thead += `</tr></thead>`;
+
+    let tbody = '<tbody>';
+    sw.forEach(w => {
+      const st = workerStats(w.id);
+      tbody += `<tr class="${w.is_supervisor ? 'supervisor-row' : ''}">`;
+      tbody += `<td class="name-col">
+        <div class="worker-name">${w.first_name} ${w.surname} ${w.is_supervisor ? '<span class="sup-badge">SUP</span>' : ''}</div>
+        <div class="worker-sub">${w.omang_number}</div>
+        <div class="worker-stats">P: ${st.present} · A: ${st.absent} · Rate: ${st.rate}%</div>
+      </td>`;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const status = statusFor(w.id, d);
+        const cls = status === 'present' ? 'present' : status === 'absent' ? 'absent' : '';
+        const symbol = status === 'present' ? '✓' : status === 'absent' ? '✗' : '';
+        tbody += `<td class="day-cell ${cls}" data-member="${w.id}" data-day="${d}">${symbol}</td>`;
+      }
+      tbody += `</tr>`;
+    });
+    tbody += '</tbody>';
+    table.innerHTML = thead + tbody;
+
+    table.querySelectorAll('.day-cell').forEach(cell => {
+      cell.addEventListener('click', () => markAttendanceForDay(cell.dataset.member, parseInt(cell.dataset.day)));
+    });
+  }
+
+  function renderStats() {
+    const s = computeStats();
+    document.getElementById('stat-days').textContent = s.daysWithRecords;
+    document.getElementById('stat-present').textContent = s.present;
+    document.getElementById('stat-absent').textContent = s.absent;
+    document.getElementById('stat-workers').textContent = s.totalWorkers;
+  }
+
+  function renderGroupSection() {
+    document.getElementById('groupHeading').textContent = `${selectedGroup.group_name} — ${MONTH_NAMES[attMonth-1]} ${attYear}`;
+    const supervisor = workers.find(w => w.is_supervisor);
+    const supNote = document.getElementById('supervisorNote');
+    if (supervisor) {
+      supNote.style.display = 'block';
+      supNote.textContent = `Supervisor: ${supervisor.first_name} ${supervisor.surname}`;
+    } else {
+      supNote.style.display = 'none';
+    }
+
+    if (workers.length === 0) {
+      document.getElementById('groupContent').style.display = 'none';
+      document.getElementById('noWorkersNote').style.display = 'block';
+      return;
+    }
+    document.getElementById('noWorkersNote').style.display = 'none';
+    document.getElementById('groupContent').style.display = 'block';
+    renderStats();
+    renderBulkActions();
+    renderTable();
+  }
+
+  async function markAttendanceForDay(memberId, day) {
+    const key = dateKey(attYear, attMonth, day);
+    const current = attendance[key]?.[memberId] || null;
+    let next;
+    if (current === null) next = 'present';
+    else if (current === 'present') next = 'absent';
+    else next = null;
+
+    try {
+      if (next === null) {
+        const { error } = await sb.from('attendance').delete().eq('member_id', memberId).eq('attendance_date', key);
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from('attendance').upsert({
+          member_id: memberId, group_id: selectedGroup.id, project_id: PROJECT_ID,
+          ward_id: project.ward_id, attendance_date: key, status: next,
+          marked_by: null, updated_at: new Date().toISOString()
+        }, { onConflict: 'member_id,attendance_date' });
+        if (error) throw error;
+      }
+      if (!attendance[key]) attendance[key] = {};
+      if (next === null) { delete attendance[key][memberId]; if (!Object.keys(attendance[key]).length) delete attendance[key]; }
+      else attendance[key][memberId] = next;
+      renderStats();
+      renderTable();
+    } catch (e) {
+      showToast('Failed to mark attendance: ' + e.message, 'error');
+    }
+  }
+
+  async function bulkMarkAllPresent(day) {
+    if (!confirm(`Mark all ${workers.length} workers present for day ${day} in ${selectedGroup.group_name}?`)) return;
+    const key = dateKey(attYear, attMonth, day);
+    try {
+      const rows = workers.map(w => ({
+        member_id: w.id, group_id: selectedGroup.id, project_id: PROJECT_ID,
+        ward_id: project.ward_id, attendance_date: key, status: 'present',
+        marked_by: null, updated_at: new Date().toISOString()
+      }));
+      const { error } = await sb.from('attendance').upsert(rows, { onConflict: 'member_id,attendance_date' });
+      if (error) throw error;
+      attendance[key] = attendance[key] || {};
+      workers.forEach(w => attendance[key][w.id] = 'present');
+      renderStats(); renderTable();
+      showToast(`All ${workers.length} workers marked present for day ${day}`);
+    } catch (e) {
+      showToast('Bulk mark failed: ' + e.message, 'error');
+    }
+  }
+
+  async function clearDayAttendance(day) {
+    if (!confirm(`Clear all attendance records for day ${day} in ${selectedGroup.group_name}?`)) return;
+    const key = dateKey(attYear, attMonth, day);
+    try {
+      const { error } = await sb.from('attendance').delete().eq('group_id', selectedGroup.id).eq('attendance_date', key);
+      if (error) throw error;
+      delete attendance[key];
+      renderStats(); renderTable();
+      showToast(`Attendance cleared for day ${day}`);
+    } catch (e) {
+      showToast('Clear failed: ' + e.message, 'error');
+    }
+  }
+
+  async function init() {
+    project = await loadProject();
+    if (!project) return;
+    attMonth = monthNumber(project.month);
+    attYear = parseInt(project.year) || new Date().getFullYear();
+    daysInMonth = DISPLAY_DAYS;
+
+    wardInfo = await loadWardInfo(project.ward_id);
+    renderHeader();
+
+    groups = await loadGroups();
+    renderGroupTabs();
+    renderPeriod();
+
+    if (groups.length > 0) {
+      await selectGroup(groups[0]);
+    }
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('pageRoot').style.display = 'block';
+  }
+
+  init();
+</script>
+</body>
+</html>

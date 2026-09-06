@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Universal AI Search</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;--s3:#1c2a25;
+    --border:#1e2d28;--border2:#243830;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;--orange:#fd7e14;
+    --text:#dff0eb;--muted:#6b8c84;
+    --green:#2c5530;--green2:#34623a;--green3:#3d6f44;--sup:#d4a574;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;display:flex;flex-direction:column;}
+
+  .header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 60%,var(--green3) 100%);padding:1.4rem 1.5rem 1.2rem;display:flex;align-items:center;gap:1rem;}
+  .logo-circle{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.2rem;font-weight:700;color:var(--green);flex-shrink:0;}
+  .header-text{flex:1;min-width:0;}
+  .header-text h1{font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.3rem);font-weight:700;color:#fff;line-height:1.2;}
+  .header-text p{font-size:.64rem;color:rgba(255,255,255,.75);margin-top:.18rem;letter-spacing:.04em;}
+  .back-pill{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.4rem .9rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.68rem;font-weight:500;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;flex-shrink:0;}
+  .back-pill:hover{background:rgba(255,255,255,.28);}
+
+  .search-zone{background:var(--surface);border-bottom:1px solid var(--border);padding:1.2rem 1.5rem;position:sticky;top:0;z-index:20;}
+  .ai-label{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:.55rem;display:flex;align-items:center;gap:.4rem;}
+  .ai-label::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .scope-badge{display:none;align-items:center;gap:.4rem;font-size:.62rem;color:var(--gold);background:rgba(232,184,75,.08);border:1px solid rgba(232,184,75,.22);border-radius:8px;padding:.45rem .75rem;margin-bottom:.75rem;line-height:1.5;}
+  .scope-badge.visible{display:flex;}
+  .scope-badge.superadmin{color:var(--blue);background:rgba(79,192,212,.08);border-color:rgba(79,192,212,.22);}
+  .scope-badge.noward{color:var(--red);background:rgba(240,96,96,.08);border-color:rgba(240,96,96,.22);}
+
+  .search-row{display:flex;gap:.6rem;align-items:flex-end;}
+  .search-textarea-wrap{flex:1;position:relative;}
+  .search-textarea{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.7rem 1rem;outline:none;resize:none;min-height:44px;max-height:120px;line-height:1.5;transition:border-color .2s;}
+  .search-textarea:focus{border-color:var(--accent);}
+  .search-textarea::placeholder{color:var(--muted);}
+  .search-go{background:var(--accent);border:none;color:#001a10;font-family:'DM Mono',monospace;font-size:.72rem;font-weight:500;padding:.55rem 1.1rem;border-radius:8px;cursor:pointer;transition:opacity .15s;white-space:nowrap;height:44px;display:flex;align-items:center;gap:.4rem;flex-shrink:0;}
+  .search-go:hover{opacity:.85;}
+  .search-go:disabled{opacity:.45;cursor:not-allowed;}
+
+  .source-chips{display:flex;gap:.45rem;margin-top:.75rem;flex-wrap:wrap;}
+  .schip{padding:.28rem .8rem;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.6rem;cursor:pointer;transition:all .15s;font-family:'DM Mono',monospace;white-space:nowrap;user-select:none;}
+  .schip:hover{border-color:var(--accent);color:var(--text);}
+  .schip.active{border-color:var(--accent);color:var(--accent);background:rgba(0,201,138,.08);font-weight:500;}
+
+  .suggestions{display:flex;gap:.4rem;margin-top:.7rem;overflow-x:auto;padding-bottom:.1rem;scrollbar-width:none;}
+  .suggestions::-webkit-scrollbar{display:none;}
+  .sug{padding:.26rem .75rem;border-radius:20px;border:1px solid rgba(79,192,212,.25);background:rgba(79,192,212,.05);color:var(--blue);font-size:.58rem;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'DM Mono',monospace;user-select:none;}
+  .sug:hover{background:rgba(79,192,212,.12);border-color:var(--blue);}
+  .sug-q{border-color:rgba(232,184,75,.25);background:rgba(232,184,75,.05);color:var(--gold);}
+  .sug-q:hover{background:rgba(232,184,75,.12);border-color:var(--gold);}
+
+  .body{flex:1;padding:1.2rem 1.5rem;}
+
+  .ai-thinking{display:none;background:rgba(0,201,138,.04);border:1px solid rgba(0,201,138,.15);border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;font-size:.68rem;color:var(--accent);align-items:center;gap:.6rem;}
+  .ai-thinking.visible{display:flex;}
+  .think-dots span{animation:blink 1.2s infinite;display:inline-block;}
+  .think-dots span:nth-child(2){animation-delay:.2s;}
+  .think-dots span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:0;}40%{opacity:1;}}
+
+  .ai-summary{display:none;background:var(--s2);border:1px solid rgba(0,201,138,.2);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:1rem;font-size:.72rem;color:var(--text);line-height:1.75;}
+  .ai-summary.visible{display:block;}
+  .ai-summary.question-mode{border-color:rgba(232,184,75,.25);background:rgba(232,184,75,.04);}
+  .ai-summary-label{font-size:.56rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:.4rem;}
+  .ai-summary.question-mode .ai-summary-label{color:var(--gold);}
+  .answer-question{font-size:.72rem;color:var(--muted);margin-bottom:.5rem;font-style:italic;}
+  .answer-text{font-size:.78rem;color:var(--text);line-height:1.85;white-space:pre-wrap;}
+
+  .result-stats{display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;}
+  .rstat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.5rem .85rem;font-size:.62rem;color:var(--muted);}
+  .rstat b{color:var(--text);font-family:'Fraunces',serif;font-size:.95rem;display:block;line-height:1.1;margin-bottom:.1rem;}
+
+  .sec-label{font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:1rem 0 .6rem;display:flex;align-items:center;gap:.5rem;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  .result-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:.6rem;transition:border-color .2s;}
+  .result-card:hover{border-color:var(--border2);}
+  .rc-top{display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.55rem;}
+  .rc-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:.85rem;font-weight:700;flex-shrink:0;}
+  .av-member{background:rgba(79,192,212,.15);color:var(--blue);border:1px solid rgba(79,192,212,.3);}
+  .av-waiting{background:rgba(0,201,138,.12);color:var(--accent);border:1px solid rgba(0,201,138,.25);}
+  .av-archive{background:rgba(232,184,75,.12);color:var(--gold);border:1px solid rgba(232,184,75,.25);}
+  .av-special{background:rgba(212,165,116,.12);color:var(--sup);border:1px solid rgba(212,165,116,.25);}
+  .rc-main{flex:1;min-width:0;}
+  .rc-name{font-size:.88rem;font-weight:500;color:var(--text);margin-bottom:.2rem;}
+  .rc-omang{font-size:.6rem;color:var(--muted);letter-spacing:.04em;margin-bottom:.32rem;}
+  .rc-tags{display:flex;gap:.3rem;flex-wrap:wrap;}
+  .rtag{font-size:.52rem;padding:.1rem .45rem;border-radius:10px;letter-spacing:.03em;}
+  .rtag-src-member{background:rgba(79,192,212,.1);color:var(--blue);border:1px solid rgba(79,192,212,.2);}
+  .rtag-src-waiting{background:rgba(0,201,138,.1);color:var(--accent);border:1px solid rgba(0,201,138,.2);}
+  .rtag-src-archive{background:rgba(232,184,75,.1);color:var(--gold);border:1px solid rgba(232,184,75,.2);}
+  .rtag-src-special{background:rgba(212,165,116,.1);color:var(--sup);border:1px solid rgba(212,165,116,.2);}
+  .rtag-neutral{background:var(--s2);color:var(--muted);border:1px solid var(--border);}
+  .rtag-sup{background:rgba(240,96,96,.1);color:var(--red);border:1px solid rgba(240,96,96,.2);}
+  .rtag-shared{background:rgba(232,184,75,.12);color:var(--gold);border:1px solid rgba(232,184,75,.25);}
+  .rc-detail{font-size:.63rem;color:var(--muted);line-height:2;margin-top:.1rem;}
+  .rc-detail b{color:var(--text);font-weight:400;}
+
+  .last-worked-row{margin-top:.5rem;background:rgba(0,201,138,.04);border:1px solid rgba(0,201,138,.12);border-radius:7px;padding:.45rem .75rem;font-size:.63rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+  .lw-icon{font-size:.8rem;}
+  .lw-label{color:var(--muted);}
+  .lw-date{color:var(--accent);font-weight:500;}
+  .lw-project{color:var(--gold);}
+
+  .rc-expand{display:flex;justify-content:flex-end;margin-top:.55rem;}
+  .expand-btn{background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:.58rem;cursor:pointer;padding:.15rem .5rem;border-radius:4px;transition:color .15s;}
+  .expand-btn:hover{color:var(--accent);}
+  .rc-extra{display:none;margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border);}
+  .rc-extra.open{display:block;}
+
+  .empty-state{text-align:center;padding:3.5rem 1.5rem;color:var(--muted);}
+  .empty-icon{font-size:2.8rem;margin-bottom:.75rem;}
+  .empty-state h3{font-family:'Fraunces',serif;font-size:1.1rem;color:var(--text);margin-bottom:.5rem;}
+  .empty-state p{font-size:.72rem;line-height:1.75;max-width:320px;margin:0 auto;}
+
+  .hl{color:var(--accent);font-weight:500;}
+
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem;font-size:.7rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:280px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
+  .toast.info{border-color:rgba(79,192,212,.4);color:var(--blue);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  @media(max-width:420px){.search-row{flex-direction:column;align-items:stretch;}.search-textarea-wrap{width:100%;}.search-go{width:100%;justify-content:center;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-pill" onclick="goBack()">← Dashboard</button>
+  <div class="header-text">
+    <h1>Universal AI Search</h1>
+    <p>Search across all workers, projects &amp; archives · Ask any question about the data</p>
+  </div>
+  <div class="logo-circle">IK</div>
+</div>
+
+<div class="search-zone">
+  <div class="ai-label">🤖 Claude AI Search</div>
+  <div class="scope-badge" id="scopeBadge"></div>
+  <div class="search-row">
+    <div class="search-textarea-wrap">
+      <textarea
+        class="search-textarea"
+        id="queryInput"
+        placeholder="Find workers — or ask anything: 'How old is William Tuahuku?' / 'How many female workers?'"
+        rows="1"
+        oninput="autoResize(this)"
+        onkeydown="handleKey(event)"
+      ></textarea>
+    </div>
+    <button class="search-go" id="searchBtn" onclick="runSearch()">🔍 Search</button>
+  </div>
+
+  <div class="source-chips">
+    <div class="schip active" data-s="members"  onclick="toggleSource(this)">👥 Members</div>
+    <div class="schip active" data-s="waiting"  onclick="toggleSource(this)">📋 Waiting List</div>
+    <div class="schip active" data-s="archive"  onclick="toggleSource(this)">🗃 Archive</div>
+    <div class="schip active" data-s="special"  onclick="toggleSource(this)">⭐ Special</div>
+  </div>
+
+  <div class="suggestions" id="suggestions">
+    <div class="sug" onclick="setSug(this)">All female workers</div>
+    <div class="sug" onclick="setSug(this)">Workers from Gantsi</div>
+    <div class="sug" onclick="setSug(this)">Supervisors only</div>
+    <div class="sug" onclick="setSug(this)">Workers in May 2026</div>
+    <div class="sug" onclick="setSug(this)">Never hired before</div>
+    <div class="sug" onclick="setSug(this)">Degree qualified</div>
+    <div class="sug" onclick="setSug(this)">Orange Money users</div>
+    <div class="sug" onclick="setSug(this)">Special — VDC category</div>
+    <div class="sug sug-q" onclick="setSug(this)">How many female workers?</div>
+    <div class="sug sug-q" onclick="setSug(this)">Which village has the most workers?</div>
+    <div class="sug sug-q" onclick="setSug(this)">How many supervisors are there?</div>
+    <div class="sug sug-q" onclick="setSug(this)">What qualifications are most common?</div>
+    <div class="sug sug-q" onclick="setSug(this)">How many workers use Orange Money?</div>
+    <div class="sug sug-q" onclick="setSug(this)">How many workers have never been hired?</div>
+    <div class="sug sug-q" onclick="setSug(this)">How old is William Tuahuku?</div>
+    <div class="sug sug-q" onclick="setSug(this)">Who are the returning workers?</div>
+  </div>
+</div>
+
+<div class="body">
+  <div class="ai-thinking" id="aiThinking">
+    <span>🤖</span>
+    <span id="thinkingMsg">AI is analysing your query<span class="think-dots"><span>.</span><span>.</span><span>.</span></span></span>
+  </div>
+
+  <div class="ai-summary" id="aiSummary">
+    <div class="ai-summary-label" id="aiSummaryLabel">AI Summary</div>
+    <div id="aiSummaryText"></div>
+  </div>
+
+  <div id="resultStats" class="result-stats" style="display:none"></div>
+  <div id="resultList"></div>
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+const SUPA_URL  = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+
+// Claude calls go through a Supabase Edge Function proxy (never call
+// api.anthropic.com directly from the browser — it has no CORS headers
+// and would require shipping a secret key to every visitor).
+// Deploy the "claude-proxy" edge function (see README notes at bottom
+// of this file) before this will work.
+const CLAUDE_URL = `${SUPA_URL}/functions/v1/claude-proxy`;
+
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+let activeSources = new Set(['members','waiting','archive','special']);
+
+// ── Ward scope state ─────────────────────────────────────────────────────────
+// _isSuperAdmin   -> no ward filtering, sees every ward's data
+// _currentWardId  -> the ward this logged-in user belongs to
+// _scopeWardIds   -> [_currentWardId, ...any granted ward ids] — only ever
+//                    used to filter queries once resolution has actually
+//                    succeeded (see _scopeResolved below)
+// _scopeResolved  -> true once we have a definitive answer (super admin OR
+//                    a real ward). Search is blocked until this is true so
+//                    we never accidentally show cross-ward data — but we
+//                    also never fall back to a fake "no rows" filter that
+//                    looks like a silent failure.
+let _isSuperAdmin  = false;
+let _currentWardId = null;
+let _scopeWardIds  = [];
+let _sharedWardNames = [];
+let _scopeResolved = false;
+let _scopeError = null;
+
+async function resolveWardScope(){
+  try{
+    // IMPORTANT: use getSession(), not getUser(), for this first check.
+    // getSession() waits for the Supabase client's internal startup
+    // (restoring the session from localStorage) before returning.
+    // getUser() makes an immediate network call and can race that
+    // restoration on first page load, returning "no user" even though
+    // a valid session exists a few milliseconds later.
+    const { data: { session }, error: sessionErr } = await sb.auth.getSession();
+    if(sessionErr || !session || !session.user){
+      _scopeError = 'not-signed-in';
+      showScopeBadge('noward', '⚠ Not signed in — please log in again.');
+      return;
+    }
+    const user = session.user;
+
+    // Super admins bypass ward scoping entirely
+    const { data: sa, error: saErr } = await sb.from('super_admins').select('email').eq('email', user.email).maybeSingle();
+    if(saErr) console.warn('super_admins check error:', saErr.message);
+    if(sa){
+      _isSuperAdmin = true;
+      _scopeResolved = true;
+      showScopeBadge('superadmin', '🛡 Super admin — searching across all wards');
+      return;
+    }
+
+    const { data: wu, error: wuErr } = await sb.from('ward_users').select('ward_id').eq('auth_user_id', user.id).maybeSingle();
+    if(wuErr){
+      // A real query error (not just "no row") — most likely a missing
+      // RLS SELECT policy on ward_users. Surface this clearly instead of
+      // silently treating it the same as "no ward assigned".
+      _scopeError = 'ward-lookup-failed: ' + wuErr.message;
+      showScopeBadge('noward', '⚠ Could not verify your ward (permissions issue) — see console.');
+      console.error('ward_users lookup failed — likely missing RLS SELECT policy for own row:', wuErr);
+      return;
+    }
+    if(!wu || !wu.ward_id){
+      _scopeError = 'no-ward';
+      showScopeBadge('noward', '⚠ Your account isn\'t linked to a ward yet — contact your super admin.');
+      return;
+    }
+    _currentWardId = wu.ward_id;
+
+    const [{ data: homeWard }, { data: scopeRows, error: scopeErr }] = await Promise.all([
+      sb.from('wards').select('ward_name').eq('id', _currentWardId).maybeSingle(),
+      sb.from('ward_search_scope').select('allowed_ward_id').eq('ward_id', _currentWardId)
+    ]);
+    if(scopeErr) console.warn('ward_search_scope read failed (own grants may not show, but search will still work with your own ward):', scopeErr.message);
+
+    const allowedIds = (scopeRows||[]).map(r=>r.allowed_ward_id);
+    _scopeWardIds = [_currentWardId, ...allowedIds];
+    _scopeResolved = true;
+
+    if(allowedIds.length){
+      const { data: wardsRows } = await sb.from('wards').select('ward_name').in('id', allowedIds);
+      _sharedWardNames = (wardsRows||[]).map(w=>w.ward_name);
+      showScopeBadge('shared', `🔗 Searching ${homeWard?.ward_name||'your ward'} + shared data from: ${_sharedWardNames.join(', ')}`);
+    } else {
+      showScopeBadge('shared', `📍 Searching ${homeWard?.ward_name||'your ward'}`);
+    }
+  } catch(e){
+    _scopeError = 'exception: ' + e.message;
+    console.error('Ward scope resolution failed:', e);
+    showScopeBadge('noward', '⚠ Could not resolve your ward — see console.');
+  }
+}
+
+function showScopeBadge(kind, text){
+  const el = document.getElementById('scopeBadge');
+  el.textContent = text;
+  el.classList.remove('superadmin','noward');
+  if(kind==='superadmin') el.classList.add('superadmin');
+  if(kind==='noward')     el.classList.add('noward');
+  el.classList.add('visible');
+}
+
+let _scopeReady = resolveWardScope();
+
+// Safety net: if the first attempt didn't resolve (e.g. a very slow
+// localStorage read on some browsers), retry once when Supabase fires
+// its own "session is ready" event, instead of leaving the user stuck
+// on a stale failure until they manually reload.
+sb.auth.onAuthStateChange((event, session) => {
+  if(!_scopeResolved && session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')){
+    _scopeReady = resolveWardScope();
+  }
+});
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function goBack(){
+  const pid = new URLSearchParams(window.location.search).get('project');
+  window.location.href = pid ? `vdc-dashboard.html?project=${pid}` : 'vdc-dashboard.html';
+}
+
+// ── UI helpers ──────────────────────────────────────────────────────────────
+function autoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function handleKey(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();runSearch();} }
+function setSug(el){ document.getElementById('queryInput').value=el.textContent.trim(); runSearch(); }
+
+function toggleSource(el){
+  const s=el.dataset.s;
+  if(activeSources.has(s)){
+    if(activeSources.size===1){showToast('At least one source required','info');return;}
+    activeSources.delete(s); el.classList.remove('active');
+  } else {
+    activeSources.add(s); el.classList.add('active');
+  }
+}
+
+function showToast(msg,type='success'){
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),3200);
+}
+
+function setThinkingMsg(msg){
+  document.getElementById('thinkingMsg').innerHTML = msg + '<span class="think-dots"><span>.</span><span>.</span><span>.</span></span>';
+}
+
+function fmtOmang(v){
+  const d=(v||'').replace(/\D/g,'').substring(0,9);
+  let o='';for(let i=0;i<d.length;i++){if(i&&i%3===0)o+=' ';o+=d[i];}return o;
+}
+
+function calcAge(dob){
+  if(!dob)return'?';
+  const b=new Date(dob),t=new Date();
+  let a=t.getFullYear()-b.getFullYear();
+  if(t.getMonth()<b.getMonth()||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate()))a--;
+  return isNaN(a)?'?':a;
+}
+
+function fmtDob(dob){
+  if(!dob) return '—';
+  const d=new Date(dob);
+  if(isNaN(d.getTime())) return dob;
+  return d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function hl(str,q){
+  if(!q||!str) return str||'—';
+  const terms=q.toLowerCase().split(/\s+/).filter(w=>w.length>2);
+  let result=String(str);
+  terms.forEach(term=>{
+    const re=new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'gi');
+    result=result.replace(re,'<span class="hl">$1</span>');
+  });
+  return result;
+}
+
+function initials(fn,sn){ return `${(fn||'?')[0]}${(sn||'?')[0]}`.toUpperCase(); }
+
+const MONTH_ORDER = {january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+
+// For an active 'members' row, how chronologically late is the PROJECT
+// it's linked to (year*12+month), independent of whether that project's
+// hire_date has been filled in yet. Returns null if year/month can't be
+// parsed.
+function projectPeriod(r){
+  if(r._source !== 'members') return null;
+  const y = parseInt(r._arch_year, 10);
+  const mNum = MONTH_ORDER[(r._arch_month||'').toLowerCase()];
+  if(!y || !mNum) return null;
+  return y*12 + mNum;
+}
+
+// When the same person appears more than once (e.g. a member who
+// belongs to a group in more than one project, or a member who also
+// has an old archive/waiting/special row), pick which duplicate "wins"
+// for display/answering:
+//   1. Lower source priority wins outright (an active member beats an
+//      archive/waiting/special row for the same omang).
+//   2. On a tie between two 'members' rows (someone assigned to groups
+//      in multiple projects), rank by the PROJECT's own year+month —
+//      i.e. which project is actually their most recent assignment —
+//      NOT by whether that project's hire_date happens to be set yet.
+//      Ranking by hire_date presence was the bug: an officer setting
+//      hire_date on an older project before getting to the current one
+//      made the older project win, even though it wasn't the person's
+//      latest project. Whatever hire_date (or lack of one) belongs to
+//      the truly-latest project is what should show.
+//   3. On a tie between two rows of any other single source (e.g. two
+//      archive rows), fall back to comparing last_worked_date directly,
+//      since those are real historical dates, not project labels.
+function pickBetterRecord(existing, incoming, srcPriority){
+  if(!existing) return incoming;
+  const pExisting = srcPriority[existing._source] ?? 99;
+  const pIncoming = srcPriority[incoming._source] ?? 99;
+  if(pIncoming < pExisting) return incoming;
+  if(pIncoming > pExisting) return existing;
+
+  if(existing._source === 'members'){
+    const pdExisting = projectPeriod(existing);
+    const pdIncoming = projectPeriod(incoming);
+    if(pdIncoming != null && (pdExisting == null || pdIncoming > pdExisting)) return incoming;
+    return existing;
+  }
+
+  const dExisting = existing.last_worked_date ? new Date(existing.last_worked_date) : null;
+  const dIncoming = incoming.last_worked_date ? new Date(incoming.last_worked_date) : null;
+  if(dIncoming && (!dExisting || dIncoming > dExisting)) return incoming;
+  return existing;
+}
+
+// ── Known query → direct filter map ────────────────────────────────────────
+const KNOWN_FILTERS = {
+  'all female workers':        { summary:'All female workers in the system', filters:{ sex:'F' } },
+  'workers from gantsi':       { summary:'Workers from Gantsi', filters:{ village:'Gantsi' } },
+  'supervisors only':          { summary:'All supervisors', filters:{ is_supervisor:true } },
+  'workers in may 2026':       { summary:'Workers who worked in May 2026', filters:{ month:'May', year:'2026' } },
+  'never hired before':        { summary:'Workers with no prior hire history', filters:{ never_worked:true } },
+  'degree qualified':          { summary:'Workers with a Degree qualification', filters:{ qualification:'Degree' } },
+  'orange money users':        { summary:'Workers using Orange Money', filters:{ mobile_money_provider:'orange' } },
+  'special — vdc category':   { summary:'Special workers in the VDC category', filters:{ category:'VDC' } },
+  'special - vdc category':   { summary:'Special workers in the VDC category', filters:{ category:'VDC' } },
+};
+
+// ── Fetch all data from Supabase (scoped to this ward + any granted wards) ──
+async function fetchAllData(){
+  const results = { members:[], waiting:[], archive:[], special:[] };
+  const tasks = [];
+
+  // Only super admins skip ward filtering. Everyone else is filtered to
+  // _scopeWardIds, which by this point is guaranteed non-empty (runSearch
+  // blocks the search entirely if scope resolution didn't succeed).
+  const applyScope = (q) => _isSuperAdmin ? q : q.in('ward_id', _scopeWardIds);
+
+  if(activeSources.has('members')){
+    tasks.push((async()=>{
+      // NOTE: last-hired date for active (unarchived) members comes ONLY
+      // from the current project's hire_date field (set on the
+      // Project Settings page) — never from project_archive. Archive
+      // rows only apply once a project has actually been archived, at
+      // which point that worker shows up under the 'archive' source
+      // instead. There is no comparison/merge between the two anymore.
+      let q = sb.from('members').select('*, groups(group_name, location, project_id, projects(project_name, month, year, hire_date))');
+      q = applyScope(q);
+      const { data: membersData, error } = await q;
+      if(error) console.error('members query failed:', error.message);
+      const members = membersData || [];
+      results.members = members.map(m=>{
+        const proj = m.groups?.projects || null;
+        return {
+          ...m, _source:'members',
+          _shared: !_isSuperAdmin && _currentWardId && m.ward_id !== _currentWardId,
+          last_worked_date: proj?.hire_date || null,
+          _arch_project:    proj?.project_name || null,
+          _arch_month:      proj?.month || null,
+          _arch_year:       proj?.year || null,
+        };
+      });
+    })());
+  }
+
+  if(activeSources.has('waiting')){
+    tasks.push((async()=>{
+      let q = sb.from('waiting_list').select('*, projects(project_name, month, year)');
+      q = applyScope(q);
+      const { data, error } = await q;
+      if(error) console.error('waiting_list query failed:', error.message);
+      results.waiting = (data||[]).map(m=>({
+        ...m, _source:'waiting',
+        _shared: !_isSuperAdmin && _currentWardId && m.ward_id !== _currentWardId
+      }));
+    })());
+  }
+
+  if(activeSources.has('archive')){
+    tasks.push((async()=>{
+      let q = sb.from('project_archive').select('*').order('archived_at',{ascending:false});
+      q = applyScope(q);
+      const { data, error } = await q;
+      if(error) console.error('project_archive query failed:', error.message);
+      const map={};
+      (data||[]).forEach(r=>{
+        if(!map[r.omang_number]) map[r.omang_number]={
+          ...r,_source:'archive',
+          _shared: !_isSuperAdmin && _currentWardId && r.ward_id !== _currentWardId
+        };
+      });
+      results.archive = Object.values(map);
+    })());
+  }
+
+  if(activeSources.has('special')){
+    tasks.push((async()=>{
+      let q = sb.from('special_workers').select('*');
+      q = applyScope(q);
+      const { data, error } = await q;
+      if(error) console.error('special_workers query failed:', error.message);
+      results.special = (data||[]).map(m=>({
+        ...m, _source:'special',
+        _shared: !_isSuperAdmin && _currentWardId && m.ward_id !== _currentWardId
+      }));
+    })());
+  }
+
+  await Promise.all(tasks);
+  return results;
+}
+
+// ── Claude helper (via Edge Function proxy) ─────────────────────────────────
+async function claudeChat(systemPrompt, userMessage, maxTokens=400, temperature=0){
+  const res = await fetch(CLAUDE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type':'application/json',
+      'Authorization': `Bearer ${SUPA_KEY}`
+    },
+    body: JSON.stringify({
+      system: systemPrompt,
+      messages: [ { role:'user', content: userMessage } ],
+      max_tokens: maxTokens,
+      temperature
+    })
+  });
+  if(!res.ok) throw new Error('Claude proxy error ' + res.status);
+  const data = await res.json();
+  const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
+  return textBlocks.join('\n').trim();
+}
+
+// ── Step 1: Route the query ─────────────────────────────────────────────────
+async function routeQuery(query){
+  const prompt = `You are a classifier for a worker management system in Botswana.
+Classify the user's input as exactly one of two types:
+
+- "filter_search" — the user wants to FIND or LIST workers (e.g. "show female workers", "workers from Gantsi", "supervisors only", "all workers in May 2026")
+- "question_answer" — the user is ASKING A QUESTION about the data that requires a calculated or analytical answer (e.g. "how many female workers are there?", "which village has the most workers?", "what is the average age?", "who was hired last?", "give me a breakdown by qualification", "how old is [name]?", "who is [name]?", "tell me about [name]")
+
+Respond with ONLY one word: filter_search OR question_answer`;
+
+  try {
+    const answer = await claudeChat(prompt, query, 10, 0);
+    return answer.toLowerCase().includes('question') ? 'question_answer' : 'filter_search';
+  } catch(e){
+    console.warn('Router fallback:', e.message);
+    const q = query.toLowerCase();
+    if(/^(how|what|which|who|when|where|why|give me|tell me|show me the total|count|list the number|percentage|breakdown|summary|average|most|least|is there|are there|how old|how many|find me|look up)/.test(q)){
+      return 'question_answer';
+    }
+    return 'filter_search';
+  }
+}
+
+// ── Step 2a: AI filter for filter_search ───────────────────────────────────
+async function aiFilter(query){
+  const systemPrompt = `You are a data filter assistant for the Ikageng Ipelegeng Programme in Gantsi, Botswana.
+Return ONLY valid JSON (no markdown, no explanation, no extra text) in this exact format:
+{
+  "summary": "Short plain-English sentence describing what this search shows",
+  "filters": {
+    "text": "keyword to match against names/omang/village/location (or null)",
+    "sex": "M or F (or null)",
+    "qualification": "PSLE or JC or BGCSE or Diploma or Degree (or null)",
+    "is_supervisor": true or false (or null),
+    "mobile_money_provider": "smega or orange (or null)",
+    "month": "month name e.g. May (or null)",
+    "year": "year string e.g. 2026 (or null)",
+    "never_worked": true (or null),
+    "is_returning": true or false (or null),
+    "category": "VDC or Destitute or Vulnerable or Volunteer or Other (or null)",
+    "village": "village/location name (or null)",
+    "min_employments": number (or null)
+  }
+}`;
+
+  try {
+    const text = await claudeChat(systemPrompt, query, 400, 0);
+    const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+    if(!parsed.filters) throw new Error('No filters key');
+    return parsed;
+  } catch(e){
+    console.warn('aiFilter fallback:', e.message);
+    return smartFallback(query);
+  }
+}
+
+// ── Step 2b: AI answer for question_answer ─────────────────────────────────
+async function aiAnswer(query, allData){
+  const allRecords = Object.values(allData).flat();
+  const today = new Date().toISOString().split('T')[0];
+
+  const srcPriority = {members:0,waiting:1,archive:2,special:3};
+  const deduped = {};
+  allRecords.forEach(r => {
+    const key = r.omang_number || r.id;
+    deduped[key] = pickBetterRecord(deduped[key], r, srcPriority);
+  });
+  const uniqueRecords = Object.values(deduped);
+
+  function compact(r){
+    const o = { n: `${r.first_name||''} ${r.surname||''}`.trim(), src: r._source };
+    if(r.omang_number)         o.omang   = r.omang_number;
+    if(r.sex)                  o.sex     = r.sex;
+    if(r.date_of_birth)        o.dob     = r.date_of_birth;
+    const v = r.village||r.location||r.groups?.location||null;
+    if(v)                      o.village = v;
+    if(r.qualification)        o.qual = r.qualification;
+    if(r.is_supervisor)        o.supervisor = true;
+    const mmp = (r.mobile_money_provider||'smega').toLowerCase();
+    o.mmp = mmp;
+    if(r.category)             o.cat    = r.category;
+    if(r.last_worked_date)     o.last_hired = r.last_worked_date;
+    if(r.start_date)           o.start  = r.start_date;
+    const proj = r._arch_project||r.project_name||r.groups?.projects?.project_name||null;
+    if(proj)                   o.project = proj;
+    const mo = r._arch_month||r.month||r.groups?.projects?.month||null;
+    const yr = r._arch_year||r.year||r.groups?.projects?.year||null;
+    if(mo) o.month = mo;
+    if(yr) o.year  = yr;
+    if(r.total_days_worked)    o.days   = r.total_days_worked;
+    if(r.total_employments)    o.emps   = r.total_employments;
+    if(r.is_returning_worker)  o.returning = true;
+    if(r.notes)                o.notes  = r.notes;
+    return o;
+  }
+
+  const nameMatch = query.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/) ||
+                    query.match(/\b([a-z]+(?:\s+[a-z]+)+)\b/i);
+  let focusedRecords = null;
+  if(nameMatch){
+    const needle = nameMatch[1].toLowerCase();
+    const words  = needle.split(/\s+/);
+    focusedRecords = uniqueRecords.filter(r => {
+      const full = `${r.first_name||''} ${r.surname||''}`.toLowerCase();
+      return words.every(w => full.includes(w));
+    });
+  }
+
+  let contextText, recordNote;
+
+  if(focusedRecords && focusedRecords.length > 0 && focusedRecords.length <= 10){
+    contextText = JSON.stringify(focusedRecords.map(compact));
+    recordNote  = `${focusedRecords.length} matching worker record(s) for the name in the query`;
+  } else {
+    const header = 'n|src|omang|sex|dob|village|qual|supervisor|mmp|cat|last_hired|start|project|month|year|days|emps|returning|notes';
+    const rows = uniqueRecords.map(r => {
+      const c = compact(r);
+      return [
+        c.n||'',c.src||'',c.omang||'',c.sex||'',c.dob||'',
+        c.village||'',c.qual||'',c.supervisor?'Y':'',c.mmp||'',c.cat||'',
+        c.last_hired||'',c.start||'',c.project||'',c.month||'',c.year||'',
+        c.days||'',c.emps||'',c.returning?'Y':'',c.notes||''
+      ].join('|');
+    });
+    contextText = header + '\n' + rows.join('\n');
+    recordNote  = `${uniqueRecords.length} unique worker records (pipe-delimited, header row first)`;
+  }
+
+  const systemPrompt = `You are a helpful data analyst for the Ikageng Ipelegeng Programme, a community work programme in Gantsi District, Botswana.
+Today is ${today}.
+
+You will receive worker records and must answer the user's question accurately.
+- For age: calculate from dob field using today's date (${today})
+- For "when did X start working": use the start field (special workers) or last_hired / month+year fields
+- For "when was X last hired" / "when did X first work": use month+year or last_hired; if only last_hired is available, say so
+- Partial name matching is fine — match on first or last name
+- If a specific person is not found, say so clearly
+- Be concise (under 8 lines unless a list is needed)
+- Never invent data`;
+
+  try {
+    return await claudeChat(systemPrompt, `${recordNote}:\n${contextText}\n\nQuestion: ${query}`, 700, 0.1);
+  } catch(e){
+    console.warn('aiAnswer full records failed, falling back to summary:', e.message);
+    return aiAnswerSummaryFallback(query, allData, today);
+  }
+}
+
+async function aiAnswerSummaryFallback(query, allData, today){
+  const allRecords = Object.values(allData).flat();
+  const byQual={}, byVillage={}, byMMP={}, byCategory={};
+  allRecords.forEach(r=>{
+    const q=r.qualification||'Unknown'; byQual[q]=(byQual[q]||0)+1;
+    const v=r.village||r.location||r.groups?.location||'Unknown'; byVillage[v]=(byVillage[v]||0)+1;
+    const m=(r.mobile_money_provider||'unknown').toLowerCase(); byMMP[m]=(byMMP[m]||0)+1;
+  });
+  allData.special.forEach(r=>{ const c=r.category||'Unknown'; byCategory[c]=(byCategory[c]||0)+1; });
+
+  const summary = {
+    total: allRecords.length,
+    by_source:{ members:allData.members.length, waiting:allData.waiting.length, archive:allData.archive.length, special:allData.special.length },
+    by_sex:{ M:allRecords.filter(r=>r.sex==='M').length, F:allRecords.filter(r=>r.sex==='F').length },
+    supervisors: allRecords.filter(r=>r.is_supervisor).length,
+    returning:   allData.waiting.filter(r=>r.is_returning_worker).length,
+    never_hired: allData.waiting.filter(r=>!r.last_worked_date).length,
+    by_qualification: byQual,
+    by_village:       byVillage,
+    by_category:      byCategory,
+    by_mobile_money:  byMMP,
+  };
+
+  const systemPrompt = `You are a data analyst for the Ikageng Ipelegeng Programme in Gantsi, Botswana. Today is ${today}.
+Answer from the statistical summary provided. If the question asks about a specific person and you only have aggregate data, say you need individual records to answer that.`;
+
+  try {
+    return await claudeChat(systemPrompt, `Summary:\n${JSON.stringify(summary,null,2)}\n\nQuestion: ${query}`, 600, 0.1);
+  } catch(e){
+    return `Could not answer: ${e.message}`;
+  }
+}
+
+// ── Smart fallback (no AI) ──────────────────────────────────────────────────
+function smartFallback(query){
+  const q=query.toLowerCase();
+  const filters={};
+  if(/\bfemale\b|\bwomen\b|\bwoman\b/.test(q))   filters.sex='F';
+  if(/\bmale\b|\bmen\b|\bman\b/.test(q))          filters.sex='M';
+  if(/\bsupervisor/.test(q))                       filters.is_supervisor=true;
+  if(/\borange\b/.test(q))                         filters.mobile_money_provider='orange';
+  if(/\bsmega\b/.test(q))                          filters.mobile_money_provider='smega';
+  if(/\bnever (worked|hired)\b|\bnew worker\b/.test(q))    filters.never_worked=true;
+  if(/\breturning\b/.test(q))                      filters.is_returning=true;
+  if(/\bdegree\b/.test(q))                         filters.qualification='Degree';
+  if(/\bdiploma\b/.test(q))                        filters.qualification='Diploma';
+  if(/\bbgcse\b/.test(q))                          filters.qualification='BGCSE';
+  if(/\bjc\b/.test(q))                             filters.qualification='JC';
+  if(/\bpsle\b/.test(q))                           filters.qualification='PSLE';
+  if(/\bvdc\b/.test(q))                            filters.category='VDC';
+  if(/\bdestitute\b/.test(q))                      filters.category='Destitute';
+  if(/\bvolunteer\b/.test(q))                      filters.category='Volunteer';
+  if(/\bvulnerable\b/.test(q))                     filters.category='Vulnerable';
+  const MONTHS=['january','february','march','april','may','june','july','august','september','october','november','december'];
+  MONTHS.forEach(m=>{ if(q.includes(m)) filters.month=m.charAt(0).toUpperCase()+m.slice(1); });
+  const yearMatch=q.match(/20\d\d/);
+  if(yearMatch) filters.year=yearMatch[0];
+  if(Object.keys(filters).length===0) filters.text=query;
+  return { summary:`Showing results for "${query}"`, filters };
+}
+
+// ── Apply filters to data ───────────────────────────────────────────────────
+function applyFilters(allData, filters){
+  const q=(filters.text||'').toLowerCase().trim();
+
+  function textMatch(m){
+    if(!q) return true;
+    const haystack=[
+      m.first_name,m.surname,m.omang_number,m.village,m.location,
+      m.groups?.group_name,m.groups?.location,m.groups?.projects?.project_name,
+      m.project_name,m.group_name,m.category,m.notes,m._arch_project
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(q);
+  }
+
+  function check(m){
+    if(!textMatch(m)) return false;
+    if(filters.sex && (m.sex||'').toUpperCase()!==filters.sex.toUpperCase()) return false;
+    if(filters.qualification && (m.qualification||'').toLowerCase()!==filters.qualification.toLowerCase()) return false;
+    if(filters.is_supervisor!=null && !!m.is_supervisor!==filters.is_supervisor) return false;
+    if(filters.mobile_money_provider && (m.mobile_money_provider||'').toLowerCase()!==filters.mobile_money_provider.toLowerCase()) return false;
+    if(filters.village){
+      const v=filters.village.toLowerCase();
+      const srcs=[m.village,m.location,m.groups?.location,m.groups?.group_name].filter(Boolean);
+      if(!srcs.some(s=>s.toLowerCase().includes(v))) return false;
+    }
+    if(filters.category && (m.category||'').toLowerCase()!==filters.category.toLowerCase()) return false;
+    if(filters.is_returning!=null && !!m.is_returning_worker!==filters.is_returning) return false;
+    if(filters.never_worked && m.last_worked_date) return false;
+    if(filters.min_employments && (m.total_employments||0)<filters.min_employments) return false;
+    if(filters.month){
+      const fm=filters.month.toLowerCase();
+      const srcs=[
+        m.month,m._arch_month,m.groups?.projects?.month,
+        m.last_worked_date?new Date(m.last_worked_date).toLocaleString('en',{month:'long'}):null
+      ].filter(Boolean).map(x=>x.toLowerCase());
+      if(!srcs.some(s=>s.includes(fm))) return false;
+    }
+    if(filters.year){
+      const fy=String(filters.year);
+      const srcs=[
+        m.year,m._arch_year,m.groups?.projects?.year,
+        m.last_worked_date?String(new Date(m.last_worked_date).getFullYear()):null
+      ].filter(Boolean);
+      if(!srcs.some(s=>String(s).includes(fy))) return false;
+    }
+    return true;
+  }
+
+  const results=[];
+  Object.values(allData).flat().forEach(m=>{ if(check(m)) results.push(m); });
+
+  const srcPriority={members:0,waiting:1,archive:2,special:3};
+  const deduped={};
+  results.forEach(m=>{
+    const key=m.omang_number||m.id;
+    deduped[key]=pickBetterRecord(deduped[key], m, srcPriority);
+  });
+
+  return Object.values(deduped).sort((a,b)=>{
+    const da=a.last_worked_date?new Date(a.last_worked_date):null;
+    const db=b.last_worked_date?new Date(b.last_worked_date):null;
+    if(da&&db) return db-da;
+    if(da) return -1;
+    if(db) return 1;
+    return 0;
+  });
+}
+
+// ── Render results (filter mode) ────────────────────────────────────────────
+function renderResults(records, aiResult, rawQuery){
+  const listEl  = document.getElementById('resultList');
+  const statsEl = document.getElementById('resultStats');
+
+  if(!records.length){
+    statsEl.style.display='none';
+    listEl.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No results found</h3><p>Try adjusting your search or enable more sources above.</p></div>`;
+    return;
+  }
+
+  const counts={members:0,waiting:0,archive:0,special:0};
+  records.forEach(r=>{if(counts[r._source]!==undefined)counts[r._source]++;});
+  statsEl.style.display='flex';
+  statsEl.innerHTML=[
+    `<div class="rstat"><b>${records.length}</b>Total found</div>`,
+    counts.members  ?`<div class="rstat"><b>${counts.members}</b>Members</div>`:'',
+    counts.waiting  ?`<div class="rstat"><b>${counts.waiting}</b>Waiting</div>`:'',
+    counts.archive  ?`<div class="rstat"><b>${counts.archive}</b>Archive</div>`:'',
+    counts.special  ?`<div class="rstat"><b>${counts.special}</b>Special</div>`:'',
+  ].join('');
+
+  const sections=[
+    {key:'members',label:'👥 Active Members', avCls:'av-member',tagCls:'rtag-src-member',tagLabel:'Member'},
+    {key:'waiting',label:'📋 Waiting List',   avCls:'av-waiting',tagCls:'rtag-src-waiting',tagLabel:'Waiting'},
+    {key:'archive',label:'🗃 Project Archive', avCls:'av-archive',tagCls:'rtag-src-archive',tagLabel:'Archive'},
+    {key:'special',label:'⭐ Special Workers', avCls:'av-special',tagCls:'rtag-src-special',tagLabel:'Special'},
+  ];
+
+  let html='';
+  sections.forEach(sec=>{
+    const group=records.filter(r=>r._source===sec.key);
+    if(!group.length) return;
+    html+=`<div class="sec-label">${sec.label} (${group.length})</div>`;
+    group.forEach(m=>{ html+=buildCard(m,sec,rawQuery); });
+  });
+  listEl.innerHTML=html;
+}
+
+// ── Build individual card ───────────────────────────────────────────────────
+function buildCard(m, sec, rawQuery){
+  const fn    = m.first_name||'';
+  const sn    = m.surname||'';
+  const omang = fmtOmang(m.omang_number||'');
+  const dob   = fmtDob(m.date_of_birth);
+  const sex   = m.sex==='F'?'♀ Female':'♂ Male';
+  const mmp   = (m.mobile_money_provider||'').toLowerCase()==='orange'?'Orange Money':'Smega';
+  const phone = m.cellphone_number||'No phone';
+  const qual  = m.qualification||'—';
+
+  let lastHiredHtml='';
+  if(m.last_worked_date){
+    const lhDate=new Date(m.last_worked_date).toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'});
+    let projectLabel='';
+    if(m._source==='members'){
+      const pn=m._arch_project||m.groups?.projects?.project_name;
+      const pm=m._arch_month||m.groups?.projects?.month;
+      const py=m._arch_year||m.groups?.projects?.year;
+      const pp=[pm,py].filter(Boolean).join(' ');
+      if(pn) projectLabel=`· <span class="lw-project">${pn}${pp?' — '+pp:''}</span>`;
+    } else if(m._source==='waiting'){
+      const pn=m.projects?.project_name;
+      const pp=[m.projects?.month,m.projects?.year].filter(Boolean).join(' ');
+      if(pn) projectLabel=`· <span class="lw-project">${pn}${pp?' — '+pp:''}</span>`;
+    } else if(m._source==='archive'){
+      const pp=[m.month,m.year].filter(Boolean).join(' ');
+      if(m.project_name) projectLabel=`· <span class="lw-project">${m.project_name}${pp?' — '+pp:''}</span>`;
+    }
+    lastHiredHtml=`<div class="last-worked-row">
+      <span class="lw-icon">📅</span>
+      <span class="lw-label">Last date hired:</span>
+      <span class="lw-date">${lhDate}</span>
+      ${projectLabel}
+    </div>`;
+  } else if(m._source==='waiting'){
+    lastHiredHtml=`<div class="last-worked-row" style="border-color:rgba(107,140,132,.15);">
+      <span class="lw-icon">🆕</span>
+      <span class="lw-label" style="color:var(--accent)">Never hired — new worker</span>
+    </div>`;
+  } else if(m._source==='members'){
+    lastHiredHtml=`<div class="last-worked-row" style="border-color:rgba(232,184,75,.15);background:rgba(232,184,75,.04);">
+      <span class="lw-icon">⚠</span>
+      <span class="lw-label" style="color:var(--gold)">No hire date set for this project yet</span>
+    </div>`;
+  }
+
+  const village=m.village||m.location||m.groups?.location||m.groups?.group_name||'—';
+
+  let extraDetail='';
+  if(m._source==='members'){
+    const grp=m.groups?.group_name||'—';
+    const proj=m._arch_project||m.groups?.projects?.project_name||'—';
+    const period=[m._arch_month||m.groups?.projects?.month,m._arch_year||m.groups?.projects?.year].filter(Boolean).join(' ');
+    extraDetail=`
+      <div class="rc-detail">👥 Group: <b>${grp}</b></div>
+      <div class="rc-detail">📌 Project: <b>${proj}${period?' — '+period:''}</b></div>
+      <div class="rc-detail">🎓 Qual: <b>${qual}</b> &nbsp;·&nbsp; 💰 <b>${mmp}</b></div>
+      <div class="rc-detail">📱 <b>${phone}</b></div>
+      ${m.is_supervisor?'<div class="rc-detail">⭐ <b style="color:var(--red)">Supervisor</b></div>':''}
+    `;
+  } else if(m._source==='waiting'){
+    extraDetail=`
+      <div class="rc-detail">📍 Village: <b>${village}</b></div>
+      <div class="rc-detail">🎓 Qual: <b>${qual}</b> &nbsp;·&nbsp; 💰 <b>${mmp}</b></div>
+      <div class="rc-detail">📱 <b>${phone}</b></div>
+      <div class="rc-detail">📊 Employments: <b>${m.total_employments||0}</b> &nbsp;·&nbsp; Days worked: <b>${m.total_days_worked||0}</b></div>
+      ${m.is_returning_worker?'<div class="rc-detail">↩ <b style="color:var(--sup)">Returning worker</b></div>':''}
+    `;
+  } else if(m._source==='archive'){
+    const period=[m.month,m.year].filter(Boolean).join(' ');
+    extraDetail=`
+      <div class="rc-detail">📌 Project: <b>${m.project_name||'—'}${period?' — '+period:''}</b></div>
+      <div class="rc-detail">👥 Group: <b>${m.group_name||'—'}</b> &nbsp;·&nbsp; 📍 <b>${m.location||'—'}</b></div>
+      <div class="rc-detail">🎓 Qual: <b>${qual}</b></div>
+      <div class="rc-detail">📱 <b>${phone}</b></div>
+      ${m.is_supervisor?'<div class="rc-detail">⭐ <b style="color:var(--red)">Was Supervisor</b></div>':''}
+    `;
+  } else if(m._source==='special'){
+    extraDetail=`
+      <div class="rc-detail">📍 Village: <b>${village}</b></div>
+      <div class="rc-detail">🏷 Category: <b style="color:var(--sup)">${m.category||'—'}</b></div>
+      <div class="rc-detail">🎓 Qual: <b>${qual}</b> &nbsp;·&nbsp; 📱 <b>${phone}</b></div>
+      ${m.notes?`<div class="rc-detail" style="color:var(--gold);font-style:italic">📝 ${m.notes}</div>`:''}
+      ${m.start_date?`<div class="rc-detail">📅 Start date: <b>${m.start_date}</b></div>`:''}
+    `;
+  }
+
+  const tags=[
+    `<span class="rtag ${sec.tagCls}">${sec.tagLabel}</span>`,
+    `<span class="rtag rtag-neutral">${sex}</span>`,
+    `<span class="rtag rtag-neutral">DOB ${dob}</span>`,
+    m.is_supervisor?`<span class="rtag rtag-sup">Supervisor</span>`:'',
+    m.category?`<span class="rtag rtag-neutral">${m.category}</span>`:'',
+    m._shared?`<span class="rtag rtag-shared">🔗 Shared</span>`:'',
+  ].filter(Boolean).join('');
+
+  const cardId=`card-${(m.omang_number||m.id||Math.random()).toString().replace(/[^a-z0-9]/gi,'')}-${m._source}`;
+
+  return `<div class="result-card" id="${cardId}">
+    <div class="rc-top">
+      <div class="rc-avatar ${sec.avCls}">${initials(fn,sn)}</div>
+      <div class="rc-main">
+        <div class="rc-name">${hl(`${fn} ${sn}`,rawQuery)}</div>
+        <div class="rc-omang">🆔 ${hl(omang,rawQuery)}</div>
+        <div class="rc-tags">${tags}</div>
+      </div>
+    </div>
+    ${extraDetail}
+    ${lastHiredHtml}
+    <div class="rc-expand">
+      <button class="expand-btn" onclick="toggleExtra('${cardId}')">▾ More details</button>
+    </div>
+    <div class="rc-extra" id="extra-${cardId}">
+      <div class="rc-detail">📅 Date of birth: <b>${m.date_of_birth||'—'}</b></div>
+      <div class="rc-detail">💰 Mobile money: <b>${mmp}</b></div>
+      <div class="rc-detail">🆔 Full Omang: <b>${omang}</b></div>
+      ${m.registered_date?`<div class="rc-detail">⏰ Registered: <b>${new Date(m.registered_date).toLocaleDateString('en-ZA')}</b></div>`:''}
+      ${m.archived_at?`<div class="rc-detail">🗃 Archived: <b>${new Date(m.archived_at).toLocaleDateString('en-ZA')}</b></div>`:''}
+      ${m.created_at?`<div class="rc-detail">📝 Created: <b>${new Date(m.created_at).toLocaleDateString('en-ZA')}</b></div>`:''}
+    </div>
+  </div>`;
+}
+
+function toggleExtra(cardId){
+  const el=document.getElementById(`extra-${cardId}`);
+  const btn=el.previousElementSibling.querySelector('button');
+  el.classList.toggle('open');
+  btn.textContent=el.classList.contains('open')?'▴ Less details':'▾ More details';
+}
+
+// ── Main search flow ────────────────────────────────────────────────────────
+async function runSearch(){
+  const query=document.getElementById('queryInput').value.trim();
+  if(!query){ showToast('Please enter a search query','info'); return; }
+
+  const btn        = document.getElementById('searchBtn');
+  const thinkingEl = document.getElementById('aiThinking');
+  const summaryEl  = document.getElementById('aiSummary');
+  const summaryTxt = document.getElementById('aiSummaryText');
+  const summaryLbl = document.getElementById('aiSummaryLabel');
+
+  btn.disabled=true; btn.textContent='Thinking…';
+  thinkingEl.classList.add('visible');
+  summaryEl.classList.remove('visible','question-mode');
+  document.getElementById('resultStats').style.display='none';
+  document.getElementById('resultList').innerHTML='';
+
+  await _scopeReady;
+
+  if(!_scopeResolved){
+    showToast('Could not determine your ward access — search blocked for safety.','error');
+    btn.disabled=false; btn.textContent='🔍 Search';
+    thinkingEl.classList.remove('visible');
+    document.getElementById('resultList').innerHTML=`
+      <div class="empty-state">
+        <div class="empty-icon">⚠</div>
+        <h3>Can't verify ward access</h3>
+        <p>${_scopeError==='no-ward'
+              ? "This account isn't linked to a ward yet — contact your super admin."
+              : "There was a permissions problem checking your ward access. Open the browser console for details, or ask your super admin to check the RLS SELECT policies on ward_users and super_admins."}</p>
+      </div>`;
+    return;
+  }
+
+  try {
+    setThinkingMsg('Routing your query');
+    const [mode, allData] = await Promise.all([
+      routeQuery(query),
+      fetchAllData()
+    ]);
+
+    if(mode === 'question_answer'){
+      setThinkingMsg('Reading worker records');
+      const answer = await aiAnswer(query, allData);
+
+      summaryLbl.textContent = '💡 AI Answer';
+      summaryTxt.innerHTML   = `<div class="answer-question">Q: ${query}</div><div class="answer-text">${answer}</div>`;
+      summaryEl.classList.add('visible','question-mode');
+      document.getElementById('resultStats').style.display='none';
+      document.getElementById('resultList').innerHTML=`
+        <div class="empty-state">
+          <div class="empty-icon">💡</div>
+          <h3>Question answered above</h3>
+          <p>To see worker cards instead, try: "Show female workers" or "Workers from Gantsi".</p>
+        </div>`;
+      showToast('Question answered','info');
+
+    } else {
+      setThinkingMsg('Building filters for your search');
+      const knownKey = query.toLowerCase().trim();
+      const isKnown  = KNOWN_FILTERS[knownKey];
+      const aiResult = isKnown ? isKnown : await aiFilter(query);
+      const filtered = applyFilters(allData, aiResult.filters||{});
+
+      summaryLbl.textContent = 'AI Summary';
+      summaryTxt.textContent = aiResult.summary||`Found ${filtered.length} results for "${query}"`;
+      summaryEl.classList.add('visible');
+      renderResults(filtered, aiResult, query);
+      showToast(`${filtered.length} worker${filtered.length!==1?'s':''} found`,'success');
+    }
+
+  } catch(e){
+    console.error('Search error:',e);
+    showToast('Search failed: '+e.message,'error');
+  } finally {
+    btn.disabled=false; btn.textContent='🔍 Search';
+    thinkingEl.classList.remove('visible');
+  }
+}
+
+// ── Initial empty state ─────────────────────────────────────────────────────
+document.getElementById('resultList').innerHTML=`
+  <div class="empty-state">
+    <div class="empty-icon">🌐</div>
+    <h3>Universal Search</h3>
+    <p>Search for workers across all sources — or ask any question about the data, like "How old is William Tuahuku?" or "Which village has the most workers?"</p>
+  </div>`;
+</script>
+</body>
+</html>

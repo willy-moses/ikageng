@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Export</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --bg:#09100f;--surface:#111a18;--s2:#18241f;--border:#1e2d28;
+    --accent:#00c98a;--gold:#e8b84b;--blue:#4fc0d4;--red:#f06060;
+    --orange:#fd7e14;--text:#dff0eb;--muted:#6b8c84;
+    --green:#2c5530;--green2:#34623a;--green3:#3d6f44;
+    --purple:#a78bfa;--elder:#ff9f43;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;}
+
+  .header{background:linear-gradient(135deg,var(--green) 0%,var(--green2) 60%,var(--green3) 100%);padding:1.6rem 1.5rem 1.4rem;display:flex;align-items:center;gap:1rem;}
+  .logo-circle{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;color:var(--green);flex-shrink:0;}
+  .header-text{flex:1;min-width:0;}
+  .header-text h1{font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.35rem);font-weight:700;color:#fff;line-height:1.2;}
+  .header-text p{font-size:.67rem;color:rgba(255,255,255,.8);margin-top:.2rem;letter-spacing:.04em;}
+  .back-pill{background:rgba(255,255,255,.18);border:none;color:#fff;padding:.42rem 1rem;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;transition:background .15s;text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;flex-shrink:0;}
+  .back-pill:hover{background:rgba(255,255,255,.28);}
+
+  .project-strip{background:rgba(0,201,138,.06);border-bottom:1px solid rgba(0,201,138,.15);padding:.48rem 1.5rem;display:flex;align-items:center;gap:.5rem;font-size:.64rem;flex-wrap:wrap;}
+  .ps-label{color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+  .ps-name{color:var(--accent);font-weight:500;}
+  .ps-badge{margin-left:auto;font-size:.56rem;background:rgba(232,184,75,.08);border:1px solid rgba(232,184,75,.2);color:var(--gold);padding:.15rem .6rem;border-radius:10px;letter-spacing:.06em;text-transform:uppercase;}
+
+  .scroll-body{padding:1.5rem;max-width:680px;margin:0 auto;}
+
+  .section-label{font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.8rem;display:block;}
+
+  .export-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.5rem;margin-bottom:1.2rem;}
+  .export-card-title{font-family:'Fraunces',serif;font-size:1rem;font-weight:700;color:var(--text);margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem;}
+  .export-card-sub{font-size:.65rem;color:var(--muted);margin-bottom:1.1rem;line-height:1.6;}
+
+  .pdf-scope-group{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;}
+  .pdf-scope-opt{display:flex;align-items:flex-start;gap:.7rem;padding:.65rem .85rem;border-radius:8px;border:1px solid var(--border);background:var(--s2);cursor:pointer;transition:all .15s;}
+  .pdf-scope-opt:hover{border-color:var(--gold);}
+  .pdf-scope-opt.selected{border-color:var(--gold);background:rgba(232,184,75,.06);}
+  .pdf-scope-radio{width:16px;height:16px;border-radius:50%;border:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.15rem;}
+  .pdf-scope-opt.selected .pdf-scope-radio{border-color:var(--gold);}
+  .pdf-scope-radio-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);display:none;}
+  .pdf-scope-opt.selected .pdf-scope-radio-dot{display:block;}
+  .pdf-scope-label{flex:1;}
+  .pdf-scope-title{font-size:.78rem;color:var(--text);}
+  .pdf-scope-sub{font-size:.6rem;color:var(--muted);margin-top:.1rem;}
+
+  .form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.9rem;}
+  .form-group label{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .form-group select{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:.6rem .85rem;border-radius:7px;outline:none;transition:border-color .15s;width:100%;}
+  .form-group select:focus{border-color:var(--accent);}
+  .form-group select option{background:var(--s2);color:var(--text);}
+
+  .col-grid{display:flex;flex-wrap:wrap;gap:.5rem;}
+  .col-toggle{display:flex;align-items:center;gap:.35rem;font-size:.7rem;cursor:pointer;background:var(--s2);border:1px solid var(--border);padding:.3rem .7rem;border-radius:6px;transition:all .15s;user-select:none;}
+  .col-toggle:hover{border-color:var(--accent);}
+  .col-toggle input{accent-color:var(--accent);}
+
+  .export-btn{width:100%;padding:.75rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.8rem;font-weight:500;cursor:pointer;border:none;background:var(--gold);color:#1a1000;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1rem;}
+  .export-btn:hover{opacity:.88;}
+  .export-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.4rem;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;text-align:center;}
+  .stat-num{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:700;line-height:1;}
+  .stat-lbl{font-size:.52rem;color:var(--muted);margin-top:.25rem;letter-spacing:.1em;text-transform:uppercase;}
+  .stat-card.ac .stat-num{color:var(--accent);}
+  .stat-card.gl .stat-num{color:var(--gold);}
+  .stat-card.bl .stat-num{color:var(--blue);}
+
+  .village-list{display:flex;flex-direction:column;gap:.5rem;}
+  .village-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;border-radius:8px;background:var(--s2);border:1px solid var(--border);}
+  .village-row-name{font-size:.78rem;color:var(--text);display:flex;align-items:center;gap:.4rem;}
+  .village-row-count{font-size:.62rem;color:var(--muted);}
+  .village-pdf-btn{background:transparent;border:1px solid rgba(232,184,75,.3);color:var(--gold);font-family:'DM Mono',monospace;font-size:.62rem;padding:.28rem .7rem;border-radius:5px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .village-pdf-btn:hover{background:rgba(232,184,75,.12);}
+
+  .site-list{display:flex;flex-direction:column;gap:.5rem;}
+  .site-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;border-radius:8px;background:var(--s2);border:1px solid var(--border);}
+  .site-row-name{font-size:.78rem;color:var(--text);}
+  .site-row-count{font-size:.62rem;color:var(--muted);}
+  .site-pdf-btn{background:transparent;border:1px solid rgba(79,192,212,.3);color:var(--blue);font-family:'DM Mono',monospace;font-size:.62rem;padding:.28rem .7rem;border-radius:5px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .site-pdf-btn:hover{background:rgba(79,192,212,.12);}
+
+  .divider{height:1px;background:var(--border);margin:1.2rem 0;}
+
+  .loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:100;}
+  .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:.78rem;color:var(--muted);letter-spacing:.1em;}
+
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1.1rem;font-size:.72rem;color:var(--text);z-index:999;animation:toastIn .2s ease;max-width:300px;line-height:1.5;}
+  .toast.success{border-color:rgba(0,201,138,.4);color:var(--accent);}
+  .toast.error{border-color:rgba(240,96,96,.4);color:var(--red);}
+  .toast.warn{border-color:rgba(253,126,20,.4);color:var(--orange);}
+  .toast.info{border-color:rgba(79,192,212,.4);color:var(--blue);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  .empty-state{text-align:center;padding:2rem 1rem;color:var(--muted);font-size:.75rem;font-style:italic;}
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading export data...</div>
+</div>
+
+<div class="header">
+  <div class="logo-circle">IK</div>
+  <div class="header-text">
+    <h1>Export Data</h1>
+    <p id="headerSub">Download PDF reports for site assignments</p>
+  </div>
+  <a class="back-pill" id="backBtn" href="site-allocation.html">&#8592; Site Allocation</a>
+</div>
+
+<div class="project-strip">
+  <span class="ps-label">Project:</span>
+  <span class="ps-name" id="psName">&#8212;</span>
+  <span class="ps-badge">PDF Export</span>
+</div>
+
+<div class="scroll-body">
+
+  <div class="stats-row">
+    <div class="stat-card ac"><div class="stat-num" id="stat-assigned">&#8212;</div><div class="stat-lbl">Assigned</div></div>
+    <div class="stat-card gl"><div class="stat-num" id="stat-sites">&#8212;</div><div class="stat-lbl">Sites</div></div>
+    <div class="stat-card bl"><div class="stat-num" id="stat-villages">&#8212;</div><div class="stat-lbl">Villages</div></div>
+  </div>
+
+  <!-- Custom Export -->
+  <div class="export-card">
+    <div class="export-card-title">&#128196; Custom PDF Export</div>
+    <div class="export-card-sub">Choose scope, filter by site or village, and select which columns to include.</div>
+
+    <span class="section-label">Scope</span>
+    <div class="pdf-scope-group">
+      <div class="pdf-scope-opt selected" data-scope="all" onclick="selectScope('all')">
+        <div class="pdf-scope-radio"><div class="pdf-scope-radio-dot"></div></div>
+        <div class="pdf-scope-label">
+          <div class="pdf-scope-title">All Sites — All Villages</div>
+          <div class="pdf-scope-sub">Every assigned worker across all sites</div>
+        </div>
+      </div>
+      <div class="pdf-scope-opt" data-scope="site" onclick="selectScope('site')">
+        <div class="pdf-scope-radio"><div class="pdf-scope-radio-dot"></div></div>
+        <div class="pdf-scope-label">
+          <div class="pdf-scope-title">Specific Site</div>
+          <div class="pdf-scope-sub">Workers from one site only</div>
+        </div>
+      </div>
+      <div class="pdf-scope-opt" data-scope="village" onclick="selectScope('village')">
+        <div class="pdf-scope-radio"><div class="pdf-scope-radio-dot"></div></div>
+        <div class="pdf-scope-label">
+          <div class="pdf-scope-title">Specific Village</div>
+          <div class="pdf-scope-sub">Workers from a village across all sites</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" id="scopeSiteWrap" style="display:none">
+      <label>Choose Site</label>
+      <select id="scope-site-id"></select>
+    </div>
+    <div class="form-group" id="scopeVillageWrap" style="display:none">
+      <label>Choose Village</label>
+      <select id="scope-village-id"></select>
+    </div>
+
+    <div class="divider"></div>
+
+    <span class="section-label">Columns</span>
+    <div class="col-grid">
+      <label class="col-toggle"><input type="checkbox" id="col-no" checked disabled> No.</label>
+      <label class="col-toggle"><input type="checkbox" id="col-name" checked disabled> Full Name</label>
+      <label class="col-toggle"><input type="checkbox" id="col-omang" checked> Omang</label>
+      <label class="col-toggle"><input type="checkbox" id="col-dob" checked> Date of Birth</label>
+      <label class="col-toggle"><input type="checkbox" id="col-village" checked> Village</label>
+      <label class="col-toggle"><input type="checkbox" id="col-site" checked> Site</label>
+      <label class="col-toggle"><input type="checkbox" id="col-source" checked> Source</label>
+      <label class="col-toggle"><input type="checkbox" id="col-last-worked"> Last Worked</label>
+      <label class="col-toggle"><input type="checkbox" id="col-employments"> Total Employments</label>
+      <label class="col-toggle"><input type="checkbox" id="col-date" checked> Assigned Date</label>
+      <label class="col-toggle"><input type="checkbox" id="col-sig"> Signature Box</label>
+    </div>
+
+    <button class="export-btn" id="customExportBtn" onclick="runCustomExport()">
+      &#128229; Download PDF
+    </button>
+  </div>
+
+  <!-- Quick Export by Site -->
+  <div class="export-card">
+    <div class="export-card-title">&#127959; Quick Export by Site</div>
+    <div class="export-card-sub">One-click PDF for each individual site.</div>
+    <div class="site-list" id="siteQuickList"></div>
+  </div>
+
+  <!-- Quick Export by Village -->
+  <div class="export-card">
+    <div class="export-card-title">&#128205; Quick Export by Village</div>
+    <div class="export-card-sub">One-click PDF for each village across all sites.</div>
+    <div class="village-list" id="villageQuickList"></div>
+  </div>
+
+</div>
+
+<script>
+const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const PROJECT_ID = new URLSearchParams(window.location.search).get('project');
+
+let _sites = [];
+let _assignments = [];
+let _projectName = null;
+let _pdfScope = 'all';
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+// Normalize omang to trimmed string for consistent lookup
+function normOmang(v) {
+  return String(v == null ? '' : v).trim();
+}
+
+function calcAge(dobStr) {
+  if (!dobStr) return null;
+  let d = null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(dobStr)) d = new Date(dobStr);
+  else if (/^\d{2}\/\d{2}\/\d{4}/.test(dobStr)) {
+    const p = dobStr.split('/');
+    d = new Date(`${p[2]}-${p[1]}-${p[0]}`);
+    if (isNaN(d)) d = new Date(`${p[2]}-${p[0]}-${p[1]}`);
+  }
+  if (!d || isNaN(d)) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}
+
+function isElder(a) { return a._age !== null && a._age >= 65; }
+
+function fmtDate(str) {
+  if (!str) return '--';
+  const d = new Date(str);
+  if (isNaN(d)) return str;
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function getAssignedVillages() {
+  const set = new Set(_assignments.map(a => a._village).filter(v => v && v !== '--'));
+  return Array.from(set).sort();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  document.getElementById('backBtn').href =
+    PROJECT_ID ? `site-allocation.html?project=${PROJECT_ID}` : 'site-allocation.html';
+
+  if (PROJECT_ID) await loadProjectContext();
+  await Promise.all([loadSites(), loadAssignments()]);
+  renderStats();
+  populateSelects();
+  renderSiteQuickList();
+  renderVillageQuickList();
+  document.getElementById('loadingScreen').style.display = 'none';
+}
+
+async function loadProjectContext() {
+  const { data } = await sb.from('projects').select('project_name,month,year').eq('id', PROJECT_ID).single();
+  if (!data) return;
+  _projectName = data.project_name;
+  const period = [data.month, data.year].filter(Boolean).join(' ');
+  document.getElementById('psName').textContent = data.project_name + (period ? ` -- ${period}` : '');
+  document.getElementById('headerSub').textContent = `${data.project_name} · Export`;
+}
+
+async function loadSites() {
+  const { data } = await sb.from('sites').select('*').order('site_name');
+  _sites = data || [];
+}
+
+async function loadAssignments() {
+  if (!PROJECT_ID) { _assignments = []; return; }
+
+  const { data } = await sb.from('site_assignments').select('*').eq('project_id', PROJECT_ID);
+  const raw = data || [];
+
+  const wlOmangs = raw.filter(a => a.source === 'waiting_list').map(a => normOmang(a.omang_number));
+  const swOmangs = raw.filter(a => a.source === 'special_workers').map(a => normOmang(a.omang_number));
+
+  let wlMap = {}, swMap = {};
+
+  if (wlOmangs.length) {
+    const { data: wl } = await sb.from('waiting_list')
+      .select('omang_number,village,date_of_birth,last_worked_date,total_employments')
+      .in('omang_number', wlOmangs);
+    (wl || []).forEach(w => { wlMap[normOmang(w.omang_number)] = w; });
+  }
+
+  if (swOmangs.length) {
+    const { data: sw } = await sb.from('special_workers')
+      .select('omang_number,village,date_of_birth,start_date')
+      .in('omang_number', swOmangs);
+    (sw || []).forEach(w => { swMap[normOmang(w.omang_number)] = w; });
+  }
+
+  _assignments = raw.map(a => {
+    const key = normOmang(a.omang_number);
+    const ex = a.source === 'waiting_list' ? (wlMap[key] || {}) : (swMap[key] || {});
+    return {
+      ...a,
+      _village: ex.village || '--',
+      _dob: ex.date_of_birth || null,
+      _age: calcAge(ex.date_of_birth),
+      _last_worked_date: ex.last_worked_date || null,
+      _total_employments: ex.total_employments != null ? ex.total_employments : null,
+    };
+  });
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderStats() {
+  document.getElementById('stat-assigned').textContent = _assignments.length;
+  document.getElementById('stat-sites').textContent = _sites.length;
+  document.getElementById('stat-villages').textContent = getAssignedVillages().length;
+}
+
+function populateSelects() {
+  document.getElementById('scope-site-id').innerHTML =
+    _sites.map(s => `<option value="${s.id}">${s.site_name}</option>`).join('');
+  document.getElementById('scope-village-id').innerHTML =
+    getAssignedVillages().map(v => `<option value="${v}">${v}</option>`).join('');
+}
+
+function renderSiteQuickList() {
+  const el = document.getElementById('siteQuickList');
+  const withWorkers = _sites.filter(s => _assignments.some(a => a.site_id === s.id));
+  if (!withWorkers.length) {
+    el.innerHTML = `<div class="empty-state">No sites have assignments yet.</div>`;
+    return;
+  }
+  el.innerHTML = withWorkers.map(s => {
+    const cnt = _assignments.filter(a => a.site_id === s.id).length;
+    return `
+    <div class="site-row">
+      <div>
+        <div class="site-row-name">${s.site_name}</div>
+        <div class="site-row-count">${cnt} worker${cnt !== 1 ? 's' : ''} &middot; ${s.allocated_slots} slots</div>
+      </div>
+      <button class="site-pdf-btn" onclick="quickSitePdf('${s.id}')">&#128196; PDF</button>
+    </div>`;
+  }).join('');
+}
+
+function renderVillageQuickList() {
+  const el = document.getElementById('villageQuickList');
+  const villages = getAssignedVillages();
+  if (!villages.length) {
+    el.innerHTML = `<div class="empty-state">No villages found in assignments.</div>`;
+    return;
+  }
+  el.innerHTML = villages.map((v, i) => {
+    const cnt = _assignments.filter(a => a._village === v).length;
+    return `
+    <div class="village-row">
+      <div>
+        <div class="village-row-name">&#128205; ${v}</div>
+        <div class="village-row-count">${cnt} worker${cnt !== 1 ? 's' : ''} across all sites</div>
+      </div>
+      <button class="village-pdf-btn" data-vi="${i}">&#128196; PDF</button>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.village-pdf-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      quickVillagePdf(villages[parseInt(this.dataset.vi, 10)]);
+    });
+  });
+}
+
+// ── Scope picker ───────────────────────────────────────────────────────────
+function selectScope(scope) {
+  _pdfScope = scope;
+  document.querySelectorAll('.pdf-scope-opt').forEach(el =>
+    el.classList.toggle('selected', el.dataset.scope === scope));
+  document.getElementById('scopeSiteWrap').style.display    = scope === 'site'    ? 'block' : 'none';
+  document.getElementById('scopeVillageWrap').style.display = scope === 'village' ? 'block' : 'none';
+}
+
+// ── Custom export ──────────────────────────────────────────────────────────
+function runCustomExport() {
+  const btn = document.getElementById('customExportBtn');
+  btn.disabled = true; btn.textContent = 'Generating...';
+
+  let groups = [], villageLabel = null;
+
+  if (_pdfScope === 'all') {
+    groups = _sites
+      .map(s => ({ site: s, workers: _assignments.filter(a => a.site_id === s.id) }))
+      .filter(g => g.workers.length > 0);
+  } else if (_pdfScope === 'site') {
+    const siteId = document.getElementById('scope-site-id').value;
+    const site   = _sites.find(s => s.id === siteId);
+    if (site) groups = [{ site, workers: _assignments.filter(a => a.site_id === siteId) }];
+  } else if (_pdfScope === 'village') {
+    villageLabel = document.getElementById('scope-village-id').value;
+    groups = _sites
+      .map(s => ({
+        site: s,
+        workers: _assignments.filter(a => a.site_id === s.id && a._village === villageLabel)
+      }))
+      .filter(g => g.workers.length > 0);
+  }
+
+  if (!groups.length) {
+    showToast('No assigned workers to export', 'warn');
+    btn.disabled = false; btn.textContent = 'Download PDF';
+    return;
+  }
+
+  const opts = {
+    includeSig:          document.getElementById('col-sig').checked,
+    includeOmang:        document.getElementById('col-omang').checked,
+    includeDob:          document.getElementById('col-dob').checked,
+    includeVillage:      document.getElementById('col-village').checked,
+    includeSite:         document.getElementById('col-site').checked,
+    includeSource:       document.getElementById('col-source').checked,
+    includeLastWorked:   document.getElementById('col-last-worked').checked,
+    includeEmployments:  document.getElementById('col-employments').checked,
+    includeDate:         document.getElementById('col-date').checked,
+  };
+
+  generatePdf(groups, opts, villageLabel);
+  btn.disabled = false; btn.textContent = 'Download PDF';
+}
+
+function quickSitePdf(siteId) {
+  const site = _sites.find(s => s.id === siteId);
+  if (!site) return;
+  const workers = _assignments.filter(a => a.site_id === siteId);
+  if (!workers.length) { showToast('No workers assigned to this site', 'warn'); return; }
+  generatePdf(
+    [{ site, workers }],
+    { includeSig:true, includeOmang:true, includeDob:true, includeVillage:true, includeSite:true, includeSource:true, includeDate:true }
+  );
+}
+
+function quickVillagePdf(village) {
+  // Filter assignments to only this village
+  const villageWorkers = _assignments.filter(a => a._village === village);
+  if (!villageWorkers.length) { showToast(`No assigned workers from ${village}`, 'warn'); return; }
+
+  // Group by site — only include sites that have workers from this village
+  const groups = _sites
+    .map(s => ({
+      site: s,
+      workers: villageWorkers.filter(a => a.site_id === s.id)
+    }))
+    .filter(g => g.workers.length > 0);
+
+  if (!groups.length) { showToast(`No assigned workers from ${village}`, 'warn'); return; }
+
+  generatePdf(
+    groups,
+    { includeSig:true, includeOmang:true, includeDob:true, includeVillage:true, includeSite:true, includeSource:true, includeDate:true },
+    village
+  );
+}
+
+// ── PDF Generator ──────────────────────────────────────────────────────────
+function generatePdf(groups, opts = {}, villageLabel = null) {
+  const {
+    includeSig         = true,
+    includeOmang       = true,
+    includeDob         = true,
+    includeVillage     = true,
+    includeSite        = true,
+    includeSource      = true,
+    includeLastWorked  = false,
+    includeEmployments = false,
+    includeDate        = true,
+  } = opts;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const today = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
+  const projLabel = _projectName ? `Project: ${_projectName}` : '';
+  const villageStr = villageLabel ? `Village: ${villageLabel}` : '';
+
+  function drawHeader(siteName, siteIdx) {
+    doc.setFillColor(44, 85, 48);
+    doc.rect(0, 0, pageW, 22, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('IKAGENG -- Site Allocation Report', margin, 10);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`Generated: ${today}`, margin, 16);
+    const rightInfo = [projLabel, villageStr].filter(Boolean).join(' - ');
+    if (rightInfo) doc.text(rightInfo, pageW - margin, 16, { align: 'right' });
+
+    doc.setFillColor(24, 36, 31);
+    doc.rect(0, 22, pageW, 12, 'F');
+    doc.setTextColor(0, 201, 138);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(`Site: ${siteName}`, margin, 30);
+    if (groups.length > 1) {
+      doc.setTextColor(107, 140, 132);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`(${siteIdx + 1} of ${groups.length})`, pageW - margin, 30, { align: 'right' });
+    }
+    doc.setTextColor(30, 30, 30);
+  }
+
+  function drawFooter(pageNum, totalPages) {
+    doc.setFillColor(240, 248, 244);
+    doc.rect(0, pageH - 10, pageW, 10, 'F');
+    doc.setTextColor(107, 140, 132);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text('Ikageng Community Project -- Confidential', margin, pageH - 4);
+    doc.text(`Page ${pageNum} of ${totalPages}`, pageW - margin, pageH - 4, { align: 'right' });
+  }
+
+  // FIX: measure text width first, then size box to fit — ASCII only, no special chars
+  function drawElderLegend(y) {
+    const legendText = '[65+] Age 65+ workers are marked with [65+] in the Name column';
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    const textWidth = doc.getTextWidth(legendText);
+    const boxW = textWidth + 10;
+    doc.setFillColor(255, 243, 224);
+    doc.setDrawColor(255, 159, 67);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, y, boxW, 7, 1.5, 1.5, 'FD');
+    doc.setTextColor(180, 100, 0);
+    doc.text(legendText, margin + 3, y + 4.5);
+    doc.setTextColor(30, 30, 30);
+    return y + 10;
+  }
+
+  // Build column definitions
+  const cols = [
+    { header: 'No.',       dataKey: 'no' },
+    { header: 'Full Name', dataKey: 'name' },
+  ];
+  if (includeOmang)       cols.push({ header: 'Omang No.',     dataKey: 'omang' });
+  if (includeDob)         cols.push({ header: 'Date of Birth', dataKey: 'dob' });
+  if (includeVillage)     cols.push({ header: 'Village',       dataKey: 'village' });
+  if (includeSite)        cols.push({ header: 'Site',          dataKey: 'site' });
+  if (includeSource)      cols.push({ header: 'Source',        dataKey: 'source' });
+  if (includeLastWorked)  cols.push({ header: 'Last Worked',   dataKey: 'lastWorked' });
+  if (includeEmployments) cols.push({ header: 'Employments',   dataKey: 'employments' });
+  if (includeDate)        cols.push({ header: 'Assigned Date', dataKey: 'date' });
+  if (includeSig)         cols.push({ header: 'Signature',     dataKey: 'sig' });
+
+  let isFirst = true;
+
+  groups.forEach((g, gIdx) => {
+    if (!isFirst) doc.addPage();
+    isFirst = false;
+
+    drawHeader(g.site.site_name, gIdx);
+
+    const assigned   = g.workers.length;
+    const slots      = g.site.allocated_slots;
+    const elderCount = g.workers.filter(w => isElder(w)).length;
+
+    doc.setFillColor(248, 252, 250);
+    doc.rect(margin, 36, pageW - margin * 2, 9, 'F');
+    doc.setDrawColor(200, 230, 210);
+    doc.rect(margin, 36, pageW - margin * 2, 9);
+    doc.setTextColor(60, 60, 60);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    let statsText = `Workers: ${assigned} / ${slots} slots  -  Status: ${assigned >= slots ? 'FULL' : 'Open'}`;
+    if (elderCount > 0) statsText += `  -  Age 65+ workers: ${elderCount}`;
+    if (villageLabel)   statsText += `  -  Village: ${villageLabel}`;
+    doc.text(statsText, margin + 3, 41.5);
+
+    let startY = drawElderLegend(47);
+
+    // Build rows — FIX: use correct source key per worker type
+    const rows = g.workers.map((w, idx) => {
+      const elder    = isElder(w);
+      const nameCell = elder
+        ? `${w.first_name} ${w.surname} [65+]`
+        : `${w.first_name} ${w.surname}`;
+
+      const dateStr = w.assigned_at
+        ? new Date(w.assigned_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+        : '--';
+
+      const row = { no: idx + 1, name: nameCell };
+      if (includeOmang)       row.omang       = w.omang_number;
+      if (includeDob)         row.dob         = w._dob || '--';
+      if (includeVillage)     row.village     = w._village || '--';
+      if (includeSite)        row.site        = g.site.site_name;
+      if (includeSource)      row.source      = w.source === 'waiting_list' ? 'Waiting List' : 'Special';
+      if (includeLastWorked)  row.lastWorked  = fmtDate(w._last_worked_date);
+      if (includeEmployments) row.employments = w._total_employments != null ? String(w._total_employments) : '--';
+      if (includeDate)        row.date        = dateStr;
+      if (includeSig)         row.sig         = '';
+      return row;
+    });
+
+    doc.autoTable({
+      columns: cols,
+      body: rows,
+      startY,
+      margin: { left: margin, right: margin },
+
+      tableWidth: 'auto',
+
+      styles: {
+        font: 'helvetica',
+        fontSize: 8,
+        cellPadding: 3,
+        valign: 'middle',
+        lineColor: [220, 235, 225],
+        lineWidth: 0.3,
+        overflow: 'linebreak',
+      },
+      headStyles: {
+        fillColor: [44, 85, 48],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+        halign: 'left',
+      },
+      alternateRowStyles: { fillColor: [248, 253, 250] },
+
+      // A4 usable width = 210 - 14(left) - 14(right) = 182mm
+      // Fixed cols: no(8) + omang(24) + dob(20) + village(20) + site(26)
+      //           + source(18) + date(22) + sig(30) = 168mm
+      // name = 'auto' absorbs the remaining 14mm, minCellWidth 34 prevents collapse
+      // lastWorked/employments replace date+sig when active — still fit within 182mm
+      columnStyles: {
+        no:          { cellWidth: 8,    halign: 'center' },
+        name:        { cellWidth: 'auto', minCellWidth: 34, fontStyle: 'bold' },
+        omang:       { cellWidth: 24 },
+        dob:         { cellWidth: 20 },
+        village:     { cellWidth: 20 },
+        site:        { cellWidth: 26 },
+        source:      { cellWidth: 18 },
+        lastWorked:  { cellWidth: 20 },
+        employments: { cellWidth: 18, halign: 'center' },
+        date:        { cellWidth: 22 },
+        sig:         { cellWidth: 30, minCellHeight: 12 },
+      },
+
+      willDrawCell: (data) => {
+        if (data.section === 'body') {
+          const worker = rows[data.row.index];
+          if (worker && worker.name && worker.name.includes('[65+]')) {
+            doc.setFillColor(255, 248, 225);
+          }
+        }
+      },
+
+      didDrawCell: (data) => {
+        if (data.column.dataKey === 'sig' && data.section === 'body') {
+          const x1 = data.cell.x + 3;
+          const x2 = data.cell.x + data.cell.width - 3;
+          const y  = data.cell.y + data.cell.height - 4;
+          doc.setDrawColor(180, 200, 185);
+          doc.setLineWidth(0.4);
+          doc.line(x1, y, x2, y);
+        }
+      },
+
+      didDrawPage: (data) => {
+        if (data.pageNumber > 1) drawHeader(g.site.site_name, gIdx);
+      },
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 5;
+    if (finalY < pageH - 20) {
+      doc.setFontSize(8);
+      doc.setTextColor(107, 140, 132);
+      doc.setFont('helvetica', 'italic');
+      let summary = `Total workers listed: ${assigned}`;
+      if (elderCount > 0) summary += `  |  Age 65+ workers: ${elderCount}`;
+      doc.text(summary, margin, finalY);
+    }
+  });
+
+  // Add footers to all pages
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    drawFooter(p, totalPages);
+  }
+
+  // Build filename
+  let filename = 'ikageng_workers.pdf';
+  if (villageLabel) {
+    filename = `ikageng_${villageLabel.replace(/\s+/g, '_')}_workers.pdf`;
+  } else if (groups.length === 1) {
+    filename = `ikageng_${groups[0].site.site_name.replace(/\s+/g, '_')}_workers.pdf`;
+  } else {
+    filename = 'ikageng_all_sites_workers.pdf';
+  }
+
+  doc.save(filename);
+  showToast('PDF downloaded', 'success');
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+init();
+
+</script>
+</body>
+</html>

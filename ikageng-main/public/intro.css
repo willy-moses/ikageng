@@ -1,0 +1,729 @@
+/*==================================================
+  IKAGENG INTRO
+==================================================*/
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html,body{
+
+    width:100%;
+    height:100%;
+
+    overflow:hidden;
+
+    font-family:'Inter',sans-serif;
+
+    background:#041321;
+
+    color:#fff;
+
+}
+
+/*==================================================
+MAIN INTRO
+==================================================*/
+
+#intro{
+
+    position:fixed;
+
+    inset:0;
+
+    overflow:hidden;
+
+    background:#071827;
+
+}
+
+/*==================================================
+BACKGROUND
+==================================================*/
+
+#background{
+
+    position:absolute;
+
+    inset:0;
+
+}
+
+/*==================================================
+SKY
+==================================================*/
+
+#sky{
+
+    position:absolute;
+
+    inset:0;
+
+    background:
+
+    linear-gradient(
+
+        to bottom,
+
+        #051120 0%,
+
+        #0a2340 25%,
+
+        #224d78 60%,
+
+        #8ec7ff 100%
+
+    );
+
+    background-size:100% 220%;
+
+}
+
+/*==================================================
+STARS
+==================================================*/
+
+#stars{
+
+    position:absolute;
+
+    inset:0;
+
+    background-image:
+
+        radial-gradient(white 1px,transparent 1px),
+
+        radial-gradient(white 1px,transparent 1px);
+
+    background-size:140px 140px;
+
+    opacity:.7;
+
+}
+
+/*==================================================
+SUN
+==================================================*/
+
+#sun{
+
+    position:absolute;
+
+    width:180px;
+
+    height:180px;
+
+    border-radius:50%;
+
+    left:50%;
+
+    bottom:-120px;
+
+    transform:translateX(-50%);
+
+    background:
+
+        radial-gradient(circle,#fff8cc 0%,#ffd54a 45%,#ffb300 100%);
+
+    box-shadow:
+
+        0 0 40px #ffcf5d,
+
+        0 0 80px rgba(255,215,120,.6),
+
+        0 0 160px rgba(255,190,0,.35);
+
+}
+
+/*==================================================
+SUN GLOW
+==================================================*/
+
+#sunGlow{
+
+    position:absolute;
+
+    width:600px;
+
+    height:600px;
+
+    left:50%;
+
+    bottom:-220px;
+
+    transform:translateX(-50%);
+
+    border-radius:50%;
+
+    background:
+
+        radial-gradient(circle,
+
+        rgba(255,210,80,.55),
+
+        rgba(255,180,0,.25),
+
+        transparent 70%);
+
+    filter:blur(70px);
+
+}
+
+/*==================================================
+HORIZON
+==================================================*/
+
+#horizon{
+
+    position:absolute;
+
+    bottom:0;
+
+    width:100%;
+
+    height:22%;
+
+    background:
+
+    linear-gradient(
+
+        to top,
+
+        #16351c,
+
+        #2d6d39,
+
+        transparent
+
+    );
+
+}
+
+/*==================================================
+MOUNTAINS
+==================================================*/
+
+#mountains{
+
+    position:absolute;
+
+    bottom:16%;
+
+    width:100%;
+
+    height:180px;
+
+    background:
+
+    linear-gradient(
+
+        transparent,
+
+        rgba(0,0,0,.15)
+
+    );
+
+    clip-path:polygon(
+
+0 100%,
+8% 72%,
+16% 85%,
+25% 58%,
+37% 90%,
+48% 46%,
+60% 86%,
+73% 52%,
+84% 78%,
+100% 100%
+
+    );
+
+    background:#284530;
+
+}
+
+/*==================================================
+GROUND
+==================================================*/
+
+#ground{
+
+    position:absolute;
+
+    bottom:0;
+
+    width:100%;
+
+    height:15%;
+
+    background:#234122;
+
+}
+
+/*==================================================
+LOGO
+==================================================*/
+
+#logoScene{
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    pointer-events:none;
+
+    z-index:30;
+
+}
+
+#logoSVG{
+
+    width:260px;
+
+    max-width:70vw;
+
+}
+
+/*==================================================
+CLOUDS
+==================================================*/
+
+#cloudLayer{
+
+    position:absolute;
+
+    inset:0;
+
+    overflow:hidden;
+
+    z-index:8;
+
+}
+
+.cloud{
+
+    position:absolute;
+
+    width:220px;
+
+    height:70px;
+
+    border-radius:60px;
+
+    background:
+
+    rgba(255,255,255,.22);
+
+    filter:blur(3px);
+
+}
+
+.cloud::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:90px;
+
+    height:90px;
+
+    border-radius:50%;
+
+    left:30px;
+
+    top:-30px;
+
+    background:inherit;
+
+}
+
+.cloud::after{
+
+    content:"";
+
+    position:absolute;
+
+    width:120px;
+
+    height:120px;
+
+    border-radius:50%;
+
+    right:25px;
+
+    top:-55px;
+
+    background:inherit;
+
+}
+
+.cloud1{
+
+    top:12%;
+
+}
+
+.cloud2{
+
+    top:28%;
+
+}
+
+.cloud3{
+
+    top:42%;
+
+}
+
+/*==================================================
+PARTICLES
+==================================================*/
+
+#particles{
+
+    position:absolute;
+
+    inset:0;
+
+    overflow:hidden;
+
+    pointer-events:none;
+
+    z-index:15;
+
+}
+
+.particle{
+
+    position:absolute;
+
+    width:4px;
+
+    height:4px;
+
+    border-radius:50%;
+
+    background:#fff7b0;
+
+    box-shadow:
+
+        0 0 8px #fff4aa,
+
+        0 0 18px gold;
+
+    animation:floatParticle linear infinite;
+
+}
+
+/*==================================================
+SLIDES
+==================================================*/
+
+#slides{
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    z-index:40;
+
+    pointer-events:none;
+
+}
+
+.slide{
+
+    position:absolute;
+
+    width:min(720px,85vw);
+
+    padding:60px;
+
+    border-radius:24px;
+
+    backdrop-filter:blur(20px);
+
+    background:
+
+    rgba(255,255,255,.08);
+
+    border:1px solid rgba(255,255,255,.18);
+
+    box-shadow:
+
+        0 25px 60px rgba(0,0,0,.35);
+
+    text-align:center;
+
+}
+
+.slide .emoji{
+
+    font-size:72px;
+
+    margin-bottom:25px;
+
+}
+
+.slide h1{
+
+    font-size:42px;
+
+    font-weight:800;
+
+    letter-spacing:4px;
+
+}
+
+.slide h2{
+
+    margin-top:10px;
+
+    color:#ffd76c;
+
+    font-size:24px;
+
+    font-weight:500;
+
+}
+
+.slide ul{
+
+    list-style:none;
+
+    margin-top:35px;
+
+}
+
+.slide li{
+
+    margin:16px 0;
+
+    font-size:22px;
+
+}
+
+/*==================================================
+FINAL
+==================================================*/
+
+#finalScreen{
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    align-items:center;
+
+    z-index:50;
+
+    text-align:center;
+
+    opacity:0;
+
+}
+
+#finalScreen h1{
+
+    font-size:72px;
+
+    letter-spacing:12px;
+
+    font-family:'Cinzel',serif;
+
+}
+
+#finalScreen h2{
+
+    margin-top:20px;
+
+    color:#ffe59a;
+
+    font-size:22px;
+
+    font-weight:400;
+
+}
+
+#finalScreen p{
+
+    margin-top:16px;
+
+    font-size:22px;
+
+}
+
+.divider{
+
+    width:260px;
+
+    height:2px;
+
+    background:#ffd76c;
+
+    margin:40px 0;
+
+}
+
+/*==================================================
+SKIP BUTTON
+==================================================*/
+
+#skipIntro{
+
+    position:absolute;
+
+    right:30px;
+
+    bottom:30px;
+
+    z-index:100;
+
+    border:none;
+
+    padding:14px 24px;
+
+    border-radius:40px;
+
+    background:rgba(255,255,255,.12);
+
+    color:white;
+
+    cursor:pointer;
+
+    backdrop-filter:blur(15px);
+
+    transition:.3s;
+
+}
+
+#skipIntro:hover{
+
+    background:rgba(255,255,255,.22);
+
+}
+
+/*==================================================
+LOADING
+==================================================*/
+
+#loading{
+
+    position:absolute;
+
+    inset:0;
+
+    display:none;
+
+    justify-content:center;
+
+    align-items:center;
+
+    flex-direction:column;
+
+    z-index:200;
+
+}
+
+/*==================================================
+KEYFRAMES
+==================================================*/
+
+@keyframes floatParticle{
+
+    from{
+
+        transform:translateY(0);
+
+        opacity:0;
+
+    }
+
+    15%{
+
+        opacity:1;
+
+    }
+
+    100%{
+
+        transform:translateY(-900px);
+
+        opacity:0;
+
+    }
+
+}
+
+/*==================================================
+RESPONSIVE
+==================================================*/
+
+@media(max-width:768px){
+
+#logoSVG{
+
+width:180px;
+
+}
+
+.slide{
+
+padding:35px;
+
+}
+
+.slide h1{
+
+font-size:30px;
+
+}
+
+.slide h2{
+
+font-size:18px;
+
+}
+
+.slide li{
+
+font-size:18px;
+
+}
+
+#finalScreen h1{
+
+font-size:46px;
+
+letter-spacing:6px;
+
+}
+
+#finalScreen h2{
+
+font-size:18px;
+
+}
+
+}

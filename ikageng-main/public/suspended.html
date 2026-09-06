@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ikageng — Account Suspended</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --bg: #09100f; --surface: #111a18; --border: #1e2d28; --gold: #e8b84b; --text: #dff0eb; --muted: #6b8c84; --red: #f06060; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem;
+  }
+  .wrap { width: min(440px,100%); text-align: center; }
+  .icon { font-size: 3.5rem; margin-bottom: 1.2rem; }
+  h1 { font-family: 'Fraunces', serif; font-size: 1.5rem; font-weight: 700; color: var(--gold); margin-bottom: .7rem; }
+  p  { font-size: .75rem; color: var(--muted); line-height: 1.8; margin-bottom: 1.4rem; }
+  .card { background: var(--surface); border: 1px solid rgba(232,184,75,.25); border-radius: 14px; padding: 2.5rem 2rem; }
+  .contact { font-size: .68rem; color: var(--gold); background: rgba(232,184,75,.06); border: 1px solid rgba(232,184,75,.2); border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1.2rem; line-height: 1.7; }
+  .logout-btn {
+    background: transparent; border: 1px solid var(--border); border-radius: 8px;
+    padding: .7rem 1.5rem; color: var(--muted); font-family: 'DM Mono', monospace;
+    font-size: .75rem; cursor: pointer; transition: all .15s;
+  }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="icon">⏸️</div>
+    <h1>Account Suspended</h1>
+    <p>Your ward account has been temporarily suspended by the system administrator. You cannot access the system at this time.</p>
+    <div class="contact">
+      To appeal or enquire about your account status, please contact the Ipelegeng Programme administrator directly.
+    </div>
+    <button class="logout-btn" onclick="doLogout()">🚪 Log Out</button>
+  </div>
+</div>
+<script>
+const sb = supabase.createClient(
+  'https://ormfjhympifzdqqscvel.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs'
+);
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.replace('login.html');
+}
+</script>
+</body>
+</html>

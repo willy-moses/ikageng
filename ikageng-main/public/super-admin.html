@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Ikageng — Super Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  :root {
+    --bg:      #09100f;
+    --surface: #111a18;
+    --s2:      #18241f;
+    --border:  #1e2d28;
+    --accent:  #00c98a;
+    --gold:    #e8b84b;
+    --blue:    #4fc0d4;
+    --red:     #f06060;
+    --purple:  #9466c4;
+    --text:    #dff0eb;
+    --muted:   #6b8c84;
+    --dim:     #4d7068;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; width: 100%; overflow-x: hidden; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Mono', monospace;
+    height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── LOADING / GATE ── */
+  .loading-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .9rem; z-index: 100;
+  }
+  .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-txt { font-size: .75rem; color: var(--muted); letter-spacing: .1em; }
+
+  .gate-box { max-width: 320px; text-align: center; padding: 0 1.2rem; }
+  .gate-box i { font-size: 2.1rem; color: var(--red); }
+  .gate-box h2 { font-family: 'Fraunces', serif; font-size: 1.15rem; margin: .7rem 0 .4rem; color: var(--text); font-weight: 400; }
+  .gate-box p { font-size: .75rem; color: var(--muted); line-height: 1.6; }
+  .gate-btn {
+    margin-top: 1.1rem; padding: .6rem 1.3rem; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: .72rem; cursor: pointer;
+  }
+  .gate-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── SHELL ── */
+  .app-shell { display: flex; flex-direction: column; flex: 1; overflow: hidden; width: 100%; min-width: 0; }
+
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 22px; display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; gap: 12px; flex-wrap: wrap;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .topbar-brand { font-family: 'Fraunces', serif; font-size: 1.05rem; color: var(--text); white-space: nowrap; }
+  .topbar-eyebrow { font-size: 10px; color: var(--gold); background: rgba(232,184,75,.12); border: 1px solid rgba(232,184,75,.28); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    background: transparent; border: 1px solid var(--border); border-radius: 7px;
+    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 16px; cursor: pointer; text-decoration: none;
+  }
+  .icon-btn:hover { border-color: rgba(0,201,138,.4); color: var(--accent); }
+
+  .content-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 22px 60px; }
+  .content-scroll::-webkit-scrollbar { width: 4px; }
+  .content-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  /* ── STATS ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; margin-bottom: 18px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 10px; text-align: center; }
+  .stat-num { font-family: 'Fraunces', serif; font-size: clamp(18px,4vw,26px); font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat-num.gold { color: var(--gold); }
+  .stat-num.red  { color: var(--red); }
+  .stat-num.blue { color: var(--blue); }
+  .stat-lbl { font-size: 9px; color: var(--dim); margin-top: 5px; letter-spacing: .09em; text-transform: uppercase; }
+
+  /* ── CONTROLS ── */
+  .controls-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .search-box { position: relative; flex: 1; min-width: 200px; }
+  .search-box i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--dim); font-size: 14px; }
+  .search-input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: .55rem .8rem .55rem 2rem; font-family: 'DM Mono', monospace; font-size: .74rem;
+    color: var(--text); outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: .5rem .85rem; background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    font-size: .68rem; color: var(--muted); cursor: pointer; white-space: nowrap;
+  }
+  .chip.active { color: var(--accent); border-color: rgba(0,201,138,.4); background: rgba(0,201,138,.08); }
+
+  /* ── TABS ── */
+  .tab-nav { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .tab-btn {
+    padding: .6rem .3rem; margin-bottom: -1px; background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--dim); font-family: 'DM Mono', monospace; font-size: .74rem; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── PROJECT LIST ── */
+  .project-list { display: flex; flex-direction: column; gap: 10px; }
+  .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .project-top { display: flex; align-items: flex-start; gap: 12px; }
+  .project-icon {
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    background: rgba(148,107,196,.1); border: 1px solid rgba(148,107,196,.25);
+    display: flex; align-items: center; justify-content: center; color: var(--purple); font-size: 17px;
+  }
+  .project-main { flex: 1; min-width: 0; }
+  .project-name { font-size: .88rem; color: var(--text); font-weight: 500; }
+  .project-meta { font-size: .68rem; color: var(--dim); margin-top: 3px; }
+  .project-meta span { color: var(--muted); }
+  .project-desc { font-size: .7rem; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+  .project-counts { display: flex; gap: 14px; margin-top: 10px; }
+  .pc-item { text-align: center; }
+  .pc-item b { display: block; font-family: 'Fraunces', serif; font-size: .95rem; color: var(--blue); }
+  .pc-item span { font-size: 8px; color: var(--dim); text-transform: uppercase; letter-spacing: .07em; }
+  .project-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .pa-btn {
+    width: 32px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 14px;
+  }
+  .pa-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pa-btn.danger:hover { border-color: rgba(240,96,96,.5); color: var(--red); }
+
+  /* ── MODAL ── */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 200;
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 1.6rem; width: min(420px, 94vw); max-height: 90vh; overflow-y: auto;
+  }
+  .modal-box h3 { font-family: 'Fraunces', serif; font-size: 1.02rem; color: var(--text); margin-bottom: 1.1rem; }
+  .modal-field { margin-bottom: .9rem; }
+  .modal-field label { display: block; font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: .35rem; }
+  .modal-field input, .modal-field select, .modal-field textarea {
+    width: 100%; background: var(--s2); border: 1px solid var(--border); border-radius: 7px;
+    padding: .55rem .75rem; font-family: 'DM Mono', monospace; font-size: .74rem; color: var(--text); outline: none;
+  }
+  .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--accent); }
+  .modal-field textarea { resize: vertical; min-height: 60px; }
+  .modal-row { display: flex; gap: .6rem; }
+  .modal-row .modal-field { flex: 1; }
+  .modal-btns { display: flex; gap: .55rem; margin-top: .3rem; }
+  .modal-cancel {
+    flex: 1; padding: .62rem; background: transparent; border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; color: var(--muted); font-family: 'DM Mono', monospace; font-size: .73rem;
+  }
+  .modal-cancel:hover { border-color: var(--accent); color: var(--accent); }
+  .modal-save {
+    flex: 2; padding: .62rem; background: linear-gradient(135deg, #00c98a, #00a572); border: none; border-radius: 8px;
+    cursor: pointer; color: #001a10; font-family: 'DM Mono', monospace; font-size: .73rem; font-weight: 500;
+  }
+  .modal-save:hover { opacity: .88; }
+  .modal-save:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ── WARD LIST ── */
+  .ward-list { display: flex; flex-direction: column; gap: 10px; }
+  .ward-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .ward-head {
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer;
+  }
+  .ward-avatar {
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+    background: #1a3d28; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .68rem; font-weight: 500; color: var(--accent); overflow: hidden;
+  }
+  .ward-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .ward-main { flex: 1; min-width: 0; }
+  .ward-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ward-name { font-size: .88rem; color: var(--text); font-weight: 500; }
+  .status-badge { font-size: 9px; padding: 2px 9px; border-radius: 20px; letter-spacing: .04em; white-space: nowrap; }
+  .status-active    { color: var(--accent); background: rgba(0,201,138,.12); border: 1px solid rgba(0,201,138,.28); }
+  .status-suspended { color: var(--red);    background: rgba(240,96,96,.12); border: 1px solid rgba(240,96,96,.28); }
+  .status-pending    { color: var(--gold);   background: rgba(232,184,75,.12); border: 1px solid rgba(232,184,75,.28); }
+  .ward-meta { font-size: .68rem; color: var(--dim); margin-top: 3px; }
+  .ward-meta span { color: var(--muted); }
+  .ward-side { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+  .ward-usercount { text-align: center; }
+  .ward-usercount b { display: block; font-family: 'Fraunces', serif; font-size: 1rem; color: var(--blue); }
+  .ward-usercount span { font-size: 8px; color: var(--dim); text-transform: uppercase; letter-spacing: .07em; }
+  .chevron { color: var(--dim); font-size: 18px; transition: transform .18s; }
+  .ward-card.open .chevron { transform: rotate(180deg); }
+
+  .ward-body { display: none; border-top: 1px solid var(--border); padding: 14px 16px 16px; }
+  .ward-card.open .ward-body { display: block; }
+
+  .detail-row { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 14px; font-size: .72rem; }
+  .detail-item { color: var(--muted); }
+  .detail-item b { color: var(--text); font-weight: 500; }
+  .detail-item i { color: var(--dim); margin-right: 4px; }
+
+  .status-actions { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .status-btn {
+    font-size: .65rem; padding: .38rem .7rem; border-radius: 6px; cursor: pointer;
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+  .status-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .status-btn.current { opacity: .4; cursor: default; pointer-events: none; }
+  .status-btn.danger { color: var(--red); border-color: rgba(240,96,96,.3); margin-left: auto; }
+  .status-btn.danger:hover { border-color: rgba(240,96,96,.6); background: rgba(240,96,96,.07); color: var(--red); }
+
+  .users-section-lbl { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+  .user-table { width: 100%; border-collapse: collapse; }
+  .user-table th {
+    text-align: left; font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--dim); padding: 6px 8px; border-bottom: 1px solid var(--border);
+  }
+  .user-table td { padding: 8px; font-size: .72rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .user-table tr:last-child td { border-bottom: none; }
+  .u-name { color: var(--text); }
+  .u-email { color: var(--muted); font-size: .68rem; }
+  .role-select {
+    background: var(--s2); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: .68rem; padding: .3rem .5rem;
+    cursor: pointer; outline: none;
+  }
+  .role-select:focus { border-color: var(--accent); }
+  .row-remove {
+    background: transparent; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--red); font-size: .68rem; padding: .32rem .55rem; cursor: pointer;
+    font-family: 'DM Mono', monospace;
+  }
+  .row-remove:hover { border-color: rgba(240,96,96,.5); background: rgba(240,96,96,.06); }
+  .no-users { font-size: .7rem; color: var(--dim); padding: 10px 4px; }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--dim); }
+  .empty-state i { font-size: 2rem; margin-bottom: .6rem; display: block; }
+  .empty-state p { font-size: .75rem; }
+
+  /* ── SEARCH SCOPE TAB ── */
+  .scope-form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .scope-form-title { font-size: .8rem; color: var(--text); font-weight: 500; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .scope-form-title i { color: var(--accent); }
+  .scope-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; }
+  .scope-icon {
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    background: rgba(79,192,212,.1); border: 1px solid rgba(79,192,212,.25);
+    display: flex; align-items: center; justify-content: center; color: var(--blue); font-size: 17px;
+  }
+  .scope-card.mutual { border-color: rgba(232,184,75,.3); }
+  .scope-card.mutual .scope-icon { background: rgba(232,184,75,.1); border-color: rgba(232,184,75,.3); color: var(--gold); }
+  .scope-mutual-tag { font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); background: rgba(232,184,75,.12); border: 1px solid rgba(232,184,75,.28); border-radius: 20px; padding: 1px 8px; margin-left: 4px; }
+  .scope-main { flex: 1; min-width: 0; }
+  .scope-flow { font-size: .84rem; color: var(--text); font-weight: 500; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .scope-flow i { color: var(--dim); font-size: 14px; }
+  .scope-reason { font-size: .7rem; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+  .scope-meta { font-size: .65rem; color: var(--dim); margin-top: 6px; }
+
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--s2); border: 1px solid var(--border); border-radius: 8px;
+    padding: .6rem 1rem; font-size: .72rem; color: var(--text);
+    z-index: 999; animation: fadeUp .2s ease; max-width: 260px; line-height: 1.5;
+  }
+  .toast.success { border-color: rgba(0,201,138,.4); color: var(--accent); }
+  .toast.error   { border-color: rgba(240,96,96,.4);  color: var(--red); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+
+  @media (max-width: 700px) {
+    .stats-grid { grid-template-columns: repeat(3,1fr); }
+    .stats-grid .stat-card:nth-child(4), .stats-grid .stat-card:nth-child(5) { display: none; }
+    .topbar { padding: 12px 14px; }
+    .content-scroll { padding: 14px 14px 50px; }
+    .ward-side { gap: 8px; }
+    .ward-usercount span { display: none; }
+    .detail-row { gap: 12px 18px; }
+    .user-table th:nth-child(3), .user-table td:nth-child(3) { display: none; }
+    .modal-row { flex-direction: column; gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-txt">Loading super admin…</div>
+</div>
+
+<div class="app-shell" id="appShell" style="display:none">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-brand">Ikageng</span>
+      <span class="topbar-eyebrow">Super Admin</span>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" onclick="refreshAll()" title="Refresh"><i class="ti ti-refresh"></i></button>
+      <a class="icon-btn" href="index.html" title="Back to app"><i class="ti ti-home"></i></a>
+      <button class="icon-btn" onclick="handleLogout()" title="Logout"><i class="ti ti-logout"></i></button>
+    </div>
+  </div>
+
+  <div class="content-scroll">
+    <div class="wrap">
+
+      <div class="tab-nav" id="tabNav">
+        <button class="tab-btn active" data-tab="wards"><i class="ti ti-building-community"></i> Wards</button>
+        <button class="tab-btn" data-tab="projects"><i class="ti ti-clipboard-list"></i> Projects</button>
+        <button class="tab-btn" data-tab="scope"><i class="ti ti-shield-lock"></i> Search Scope</button>
+      </div>
+
+      <!-- ── WARDS TAB ── -->
+      <div class="tab-panel active" id="panel-wards">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Wards</div></div>
+          <div class="stat-card"><div class="stat-num" id="stat-active">—</div><div class="stat-lbl">Active</div></div>
+          <div class="stat-card"><div class="stat-num gold" id="stat-pending">—</div><div class="stat-lbl">Pending</div></div>
+          <div class="stat-card"><div class="stat-num red" id="stat-suspended">—</div><div class="stat-lbl">Suspended</div></div>
+          <div class="stat-card"><div class="stat-num blue" id="stat-users">—</div><div class="stat-lbl">Total users</div></div>
+        </div>
+
+        <div class="controls-row">
+          <div class="search-box">
+            <i class="ti ti-search"></i>
+            <input class="search-input" id="searchInput" placeholder="Search by ward name, district or email…">
+          </div>
+          <div class="filter-chips" id="filterChips">
+            <div class="chip active" data-status="all">All</div>
+            <div class="chip" data-status="active">Active</div>
+            <div class="chip" data-status="pending">Pending</div>
+            <div class="chip" data-status="suspended">Suspended</div>
+          </div>
+        </div>
+
+        <div class="ward-list" id="wardList"></div>
+        <div class="empty-state" id="emptyState" style="display:none">
+          <i class="ti ti-mailbox"></i>
+          <p>No wards match this filter.</p>
+        </div>
+      </div>
+
+      <!-- ── PROJECTS TAB ── -->
+      <div class="tab-panel" id="panel-projects">
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card"><div class="stat-num" id="pstat-total">—</div><div class="stat-lbl">Projects</div></div>
+          <div class="stat-card"><div class="stat-num blue" id="pstat-groups">—</div><div class="stat-lbl">Groups</div></div>
+          <div class="stat-card"><div class="stat-num gold" id="pstat-members">—</div><div class="stat-lbl">Members</div></div>
+        </div>
+
+        <div class="controls-row">
+          <div class="search-box">
+            <i class="ti ti-search"></i>
+            <input class="search-input" id="projectSearchInput" placeholder="Search by project name or ward…">
+          </div>
+        </div>
+
+        <div class="project-list" id="projectList"></div>
+        <div class="empty-state" id="projectEmptyState" style="display:none">
+          <i class="ti ti-mailbox"></i>
+          <p>No projects match this search.</p>
+        </div>
+      </div>
+
+      <!-- ── SEARCH SCOPE TAB ── -->
+      <div class="tab-panel" id="panel-scope">
+        <div class="stats-grid" style="grid-template-columns:repeat(2,1fr)">
+          <div class="stat-card"><div class="stat-num blue" id="sstat-total">—</div><div class="stat-lbl">Active grants</div></div>
+          <div class="stat-card"><div class="stat-num gold" id="sstat-wards">—</div><div class="stat-lbl">Wards with a grant</div></div>
+        </div>
+
+        <div class="scope-form-card">
+          <div class="scope-form-title"><i class="ti ti-shield-plus"></i> Grant cross-ward search access</div>
+          <div class="modal-row">
+            <div class="modal-field">
+              <label>Ward</label>
+              <select id="sg-ward"></select>
+            </div>
+            <div class="modal-field">
+              <label>Can also search</label>
+              <select id="sg-allowed-ward"></select>
+            </div>
+          </div>
+          <div class="modal-field">
+            <label>Reason</label>
+            <textarea id="sg-reason" placeholder="e.g. Shared data before the ward split"></textarea>
+          </div>
+          <div class="modal-field" style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="sg-mutual" style="width:auto;accent-color:var(--accent);cursor:pointer;">
+            <label style="margin:0;text-transform:none;font-size:.72rem;color:var(--text);cursor:pointer;" for="sg-mutual">Grant both ways (mutual access)</label>
+          </div>
+          <button class="modal-save" id="sg-save" style="width:100%">Add grant</button>
+        </div>
+
+        <div class="project-list" id="scopeList"></div>
+        <div class="empty-state" id="scopeEmptyState" style="display:none">
+          <i class="ti ti-mailbox"></i>
+          <p>No search-scope grants yet.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── EDIT PROJECT MODAL ── -->
+  <div class="modal-backdrop" id="projectModalBackdrop">
+    <div class="modal-box">
+      <h3>Edit project</h3>
+      <div class="modal-field">
+        <label>Project name</label>
+        <input type="text" id="pm-name">
+      </div>
+      <div class="modal-row">
+        <div class="modal-field">
+          <label>Month</label>
+          <input type="text" id="pm-month" placeholder="e.g. June">
+        </div>
+        <div class="modal-field">
+          <label>Year</label>
+          <input type="text" id="pm-year" placeholder="e.g. 2026">
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>Ward</label>
+        <select id="pm-ward"></select>
+      </div>
+      <div class="modal-field">
+        <label>Description</label>
+        <textarea id="pm-description"></textarea>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-cancel" id="pm-cancel">Cancel</button>
+        <button class="modal-save" id="pm-save">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EDIT WARD MODAL ── -->
+  <div class="modal-backdrop" id="wardModalBackdrop">
+    <div class="modal-box">
+      <h3>Edit ward</h3>
+      <div class="modal-field">
+        <label>Ward name</label>
+        <input type="text" id="wm-name">
+      </div>
+      <div class="modal-row">
+        <div class="modal-field">
+          <label>Location</label>
+          <input type="text" id="wm-location">
+        </div>
+        <div class="modal-field">
+          <label>District</label>
+          <input type="text" id="wm-district">
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>Contact email</label>
+        <input type="text" id="wm-email">
+      </div>
+      <div class="modal-field">
+        <label>Contact phone</label>
+        <input type="text" id="wm-phone">
+      </div>
+      <div class="modal-btns">
+        <button class="modal-cancel" id="wm-cancel">Cancel</button>
+        <button class="modal-save" id="wm-save">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPA_URL = 'https://ormfjhympifzdqqscvel.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ybWZqaHltcGlmemRxcXNjdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjAwMDMsImV4cCI6MjA5MjMzNjAwM30.2p6DPa4wu_1TFYV9iReffpE91mx3iJir3BLcZ1rAxRs';
+  const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+  let _wards = [];
+  let _usersByWard = new Map();
+  let _statusFilter = 'all';
+  let _searchTerm = '';
+
+  let _projects = [];
+  let _groupsByProject = new Map();   // project_id -> [group ids]
+  let _memberCountByProject = new Map();
+  let _waitingCountByProject = new Map();
+  let _projectSearchTerm = '';
+  let _editingProjectId = null;
+  let _editingWardId = null;
+
+  let _scopeGrants = [];
+  let _currentAdminEmail = '';
+
+  function mkInitials(name) {
+    return (name || 'W').split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
+  }
+  function fmtDate(d) {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
+    catch { return d; }
+  }
+  function showToast(msg, type) {
+    type = type || 'success';
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+  async function handleLogout() {
+    if (!confirm('Logout?')) return;
+    await sb.auth.signOut();
+    window.location.replace('index.html');
+  }
+
+  // ── Access gate: only emails present in super_admins may view this page ──
+  async function checkAccess() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user || !user.email) return false;
+    const { data } = await sb.from('super_admins').select('email').eq('email', user.email).maybeSingle();
+    if (data) _currentAdminEmail = user.email;
+    return !!data;
+  }
+
+  function showGate() {
+    document.getElementById('loadingScreen').innerHTML = `
+      <div class="gate-box">
+        <i class="ti ti-shield-lock"></i>
+        <h2>Restricted access</h2>
+        <p>This page is only available to super admin accounts. Sign in with a super admin account to continue.</p>
+        <button class="gate-btn" onclick="window.location.href='index.html'">Back to app</button>
+      </div>`;
+  }
+
+  // ── Paginated fetch: Supabase/PostgREST caps a single query at 1000 rows
+  // by default, so anything that could exceed that (wards, projects, groups,
+  // members, waiting list, ward users) is paged through in batches. ──
+  async function fetchAllRows(table, selectStr, orderCol, ascending) {
+    const pageSize = 1000;
+    let from = 0;
+    let all = [];
+    while (true) {
+      let query = sb.from(table).select(selectStr).range(from, from + pageSize - 1);
+      if (orderCol) query = query.order(orderCol, { ascending: ascending !== false });
+      const { data, error } = await query;
+      if (error) throw error;
+      all = all.concat(data || []);
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+    return all;
+  }
+
+  // ── Data loading ──
+  async function loadWards() {
+    try {
+      return await fetchAllRows('wards', '*', 'created_at', false);
+    } catch (e) { showToast('Failed to load wards: ' + e.message, 'error'); return []; }
+  }
+
+  async function loadAllWardUsers() {
+    let data;
+    try {
+      data = await fetchAllRows('ward_users', '*', 'created_at', true);
+    } catch (e) { showToast('Failed to load ward users: ' + e.message, 'error'); return; }
+    _usersByWard = new Map();
+    (data || []).forEach(u => {
+      if (!_usersByWard.has(u.ward_id)) _usersByWard.set(u.ward_id, []);
+      _usersByWard.get(u.ward_id).push(u);
+    });
+  }
+
+  // ── Project data loading ──
+  async function loadProjects() {
+    try {
+      return await fetchAllRows('projects', '*', 'created_at', false);
+    } catch (e) { showToast('Failed to load projects: ' + e.message, 'error'); return []; }
+  }
+
+  async function loadProjectAggregates() {
+    let groups, members, waiting;
+    try {
+      [groups, members, waiting] = await Promise.all([
+        fetchAllRows('groups', 'id, project_id'),
+        fetchAllRows('members', 'id, group_id'),
+        fetchAllRows('waiting_list', 'id, project_id')
+      ]);
+    } catch (e) { showToast('Failed to load project data: ' + e.message, 'error'); return; }
+
+    _groupsByProject = new Map();
+    (groups || []).forEach(g => {
+      if (!g.project_id) return;
+      if (!_groupsByProject.has(g.project_id)) _groupsByProject.set(g.project_id, []);
+      _groupsByProject.get(g.project_id).push(g.id);
+    });
+
+    const memberCountByGroup = new Map();
+    (members || []).forEach(m => memberCountByGroup.set(m.group_id, (memberCountByGroup.get(m.group_id) || 0) + 1));
+
+    _memberCountByProject = new Map();
+    for (const [pid, gids] of _groupsByProject.entries()) {
+      let total = 0;
+      gids.forEach(gid => { total += memberCountByGroup.get(gid) || 0; });
+      _memberCountByProject.set(pid, total);
+    }
+
+    _waitingCountByProject = new Map();
+    (waiting || []).forEach(w => {
+      if (!w.project_id) return;
+      _waitingCountByProject.set(w.project_id, (_waitingCountByProject.get(w.project_id) || 0) + 1);
+    });
+  }
+
+  // ── Search scope (ward_search_scope) data loading ──
+  async function loadScopeGrants() {
+    try {
+      return await fetchAllRows('ward_search_scope', '*', 'created_at', false);
+    } catch (e) { showToast('Failed to load search-scope grants: ' + e.message, 'error'); return []; }
+  }
+
+  function wardNameById(wardId) {
+    const w = _wards.find(x => x.id === wardId);
+    return w ? w.ward_name : 'Unassigned';
+  }
+
+  function renderStats() {
+    const total     = _wards.length;
+    const active    = _wards.filter(w => w.status === 'active').length;
+    const pending   = _wards.filter(w => w.status === 'pending').length;
+    const suspended = _wards.filter(w => w.status === 'suspended').length;
+    const totalUsers = [..._usersByWard.values()].reduce((a, arr) => a + arr.length, 0);
+    document.getElementById('stat-total').textContent     = total;
+    document.getElementById('stat-active').textContent    = active;
+    document.getElementById('stat-pending').textContent   = pending;
+    document.getElementById('stat-suspended').textContent = suspended;
+    document.getElementById('stat-users').textContent     = totalUsers;
+  }
+
+  function matchesFilter(ward) {
+    if (_statusFilter !== 'all' && ward.status !== _statusFilter) return false;
+    if (!_searchTerm) return true;
+    const hay = [ward.ward_name, ward.district, ward.location, ward.contact_email].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(_searchTerm);
+  }
+
+  function roleLabel(role) {
+    return { admin: 'Admin', officer: 'Officer', viewer: 'Viewer' }[role] || role;
+  }
+
+  function renderWardBody(ward) {
+    const users = _usersByWard.get(ward.id) || [];
+    const rows = users.map(u => `
+      <tr data-user="${u.id}">
+        <td class="u-name">${u.full_name || '—'}</td>
+        <td class="u-email">${u.email}</td>
+        <td>
+          <select class="role-select" onchange="updateUserRole('${u.id}', this.value)">
+            <option value="admin"   ${u.role === 'admin'   ? 'selected' : ''}>Admin</option>
+            <option value="officer" ${u.role === 'officer' ? 'selected' : ''}>Officer</option>
+            <option value="viewer"  ${u.role === 'viewer'  ? 'selected' : ''}>Viewer</option>
+          </select>
+        </td>
+        <td>${fmtDate(u.created_at)}</td>
+        <td><button class="row-remove" onclick="removeUser('${u.id}', '${ward.id}')">Remove</button></td>
+      </tr>`).join('');
+
+    const usersTable = users.length ? `
+      <table class="user-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>` : `<div class="no-users">No users have been added to this ward yet.</div>`;
+
+    return `
+      <div class="detail-row">
+        <div class="detail-item"><i class="ti ti-map-pin"></i><b>${ward.location || '—'}</b></div>
+        <div class="detail-item"><i class="ti ti-building"></i>District: <b>${ward.district || '—'}</b></div>
+        <div class="detail-item"><i class="ti ti-mail"></i><b>${ward.contact_email}</b></div>
+        <div class="detail-item"><i class="ti ti-phone"></i><b>${ward.contact_phone || '—'}</b></div>
+        <div class="detail-item"><i class="ti ti-calendar"></i>Registered <b>${fmtDate(ward.created_at)}</b></div>
+      </div>
+      <div class="status-actions">
+        <button class="status-btn ${ward.status === 'active' ? 'current' : ''}" onclick="updateWardStatus('${ward.id}', 'active')">Set active</button>
+        <button class="status-btn ${ward.status === 'pending' ? 'current' : ''}" onclick="updateWardStatus('${ward.id}', 'pending')">Set pending</button>
+        <button class="status-btn ${ward.status === 'suspended' ? 'current' : ''}" onclick="updateWardStatus('${ward.id}', 'suspended')">Suspend</button>
+        <button class="status-btn" onclick="openEditWard('${ward.id}')" style="margin-left:auto"><i class="ti ti-pencil" style="margin-right:4px"></i>Edit ward</button>
+        <button class="status-btn danger" onclick="deleteWard('${ward.id}')">Delete ward</button>
+      </div>
+      <div class="users-section-lbl">Ward users (${users.length})</div>
+      ${usersTable}
+    `;
+  }
+
+  function renderWardList() {
+    const list = document.getElementById('wardList');
+    const empty = document.getElementById('emptyState');
+    const filtered = _wards.filter(matchesFilter);
+
+    if (!filtered.length) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.innerHTML = filtered.map(ward => {
+      const users = _usersByWard.get(ward.id) || [];
+      const admins = users.filter(u => u.role === 'admin').length;
+      const initials = mkInitials(ward.ward_name);
+      const avatar = ward.logo_url
+        ? `<img src="${ward.logo_url}" alt="${ward.ward_name} logo">`
+        : initials;
+      return `
+        <div class="ward-card" id="card-${ward.id}">
+          <div class="ward-head" onclick="toggleCard('${ward.id}')">
+            <div class="ward-avatar">${avatar}</div>
+            <div class="ward-main">
+              <div class="ward-name-row">
+                <span class="ward-name">${ward.ward_name}</span>
+                <span class="status-badge status-${ward.status}">${ward.status}</span>
+              </div>
+              <div class="ward-meta"><span>${ward.location || 'No location set'}</span>${ward.district ? ' · ' + ward.district : ''} · ${admins} admin${admins === 1 ? '' : 's'}</div>
+            </div>
+            <div class="ward-side">
+              <div class="ward-usercount"><b>${users.length}</b><span>Users</span></div>
+              <i class="ti ti-chevron-down chevron"></i>
+            </div>
+          </div>
+          <div class="ward-body">${renderWardBody(ward)}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleCard(wardId) {
+    const card = document.getElementById('card-' + wardId);
+    if (!card) return;
+    card.classList.toggle('open');
+  }
+
+  // ── Project rendering ──
+  function renderProjectStats() {
+    const totalGroups  = [..._groupsByProject.values()].reduce((a, arr) => a + arr.length, 0);
+    const totalMembers = [..._memberCountByProject.values()].reduce((a, n) => a + n, 0);
+    document.getElementById('pstat-total').textContent   = _projects.length;
+    document.getElementById('pstat-groups').textContent  = totalGroups;
+    document.getElementById('pstat-members').textContent = totalMembers;
+  }
+
+  function matchesProjectFilter(project) {
+    if (!_projectSearchTerm) return true;
+    const hay = [project.project_name, project.month, project.year, wardNameById(project.ward_id)]
+      .filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(_projectSearchTerm);
+  }
+
+  function renderProjectList() {
+    const list  = document.getElementById('projectList');
+    const empty = document.getElementById('projectEmptyState');
+    const filtered = _projects.filter(matchesProjectFilter);
+
+    if (!filtered.length) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.innerHTML = filtered.map(p => {
+      const groupCount   = (_groupsByProject.get(p.id) || []).length;
+      const memberCount  = _memberCountByProject.get(p.id) || 0;
+      const waitingCount = _waitingCountByProject.get(p.id) || 0;
+      const period = [p.month, p.year].filter(Boolean).join(' ') || '—';
+      return `
+        <div class="project-card">
+          <div class="project-top">
+            <div class="project-icon"><i class="ti ti-clipboard-list"></i></div>
+            <div class="project-main">
+              <div class="project-name">${p.project_name}</div>
+              <div class="project-meta"><span>${wardNameById(p.ward_id)}</span> · ${period}</div>
+              ${p.description ? `<div class="project-desc">${p.description}</div>` : ''}
+              <div class="project-counts">
+                <div class="pc-item"><b>${groupCount}</b><span>Groups</span></div>
+                <div class="pc-item"><b>${memberCount}</b><span>Members</span></div>
+                <div class="pc-item"><b>${waitingCount}</b><span>Waiting</span></div>
+              </div>
+            </div>
+            <div class="project-actions">
+              <button class="pa-btn" onclick="openEditProject('${p.id}')" title="Edit"><i class="ti ti-pencil"></i></button>
+              <button class="pa-btn danger" onclick="deleteProject('${p.id}')" title="Delete"><i class="ti ti-trash"></i></button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Search scope rendering ──
+  function populateScopeWardSelects() {
+    const wardOpts = _wards
+      .slice()
+      .sort((a, b) => a.ward_name.localeCompare(b.ward_name))
+      .map(w => `<option value="${w.id}">${w.ward_name}</option>`).join('');
+    document.getElementById('sg-ward').innerHTML = '<option value="">Select ward…</option>' + wardOpts;
+    document.getElementById('sg-allowed-ward').innerHTML = '<option value="">Select ward…</option>' + wardOpts;
+  }
+
+  function renderScopeStats() {
+    const wardsWithGrant = new Set(_scopeGrants.map(g => g.ward_id)).size;
+    document.getElementById('sstat-total').textContent = _scopeGrants.length;
+    document.getElementById('sstat-wards').textContent = wardsWithGrant;
+  }
+
+  function renderOneWayScopeCard(g) {
+    return `
+      <div class="scope-card">
+        <div class="scope-icon"><i class="ti ti-shield-check"></i></div>
+        <div class="scope-main">
+          <div class="scope-flow">
+            <span>${wardNameById(g.ward_id)}</span>
+            <i class="ti ti-arrow-right"></i>
+            <span>${wardNameById(g.allowed_ward_id)}</span>
+          </div>
+          ${g.reason ? `<div class="scope-reason">${g.reason}</div>` : ''}
+          <div class="scope-meta">Granted by ${g.created_by || 'unknown'} · ${fmtDate(g.created_at)}</div>
+        </div>
+        <div class="project-actions">
+          <button class="pa-btn danger" onclick="revokeScopeGrant('${g.id}')" title="Revoke"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`;
+  }
+
+  function renderMutualScopeCard(g, reciprocal) {
+    const reasons = [g.reason, reciprocal.reason].filter(Boolean);
+    const uniqueReasons = [...new Set(reasons)];
+    const earliest = [g, reciprocal].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0];
+    return `
+      <div class="scope-card mutual">
+        <div class="scope-icon"><i class="ti ti-arrows-left-right"></i></div>
+        <div class="scope-main">
+          <div class="scope-flow">
+            <span>${wardNameById(g.ward_id)}</span>
+            <i class="ti ti-arrows-left-right"></i>
+            <span>${wardNameById(g.allowed_ward_id)}</span>
+            <span class="scope-mutual-tag">Mutual</span>
+          </div>
+          ${uniqueReasons.map(r => `<div class="scope-reason">${r}</div>`).join('')}
+          <div class="scope-meta">Granted by ${earliest.created_by || 'unknown'} · ${fmtDate(earliest.created_at)}</div>
+        </div>
+        <div class="project-actions">
+          <button class="pa-btn danger" onclick="revokeMutualGrant('${g.id}', '${reciprocal.id}')" title="Revoke both directions"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`;
+  }
+
+  function renderScopeList() {
+    const list  = document.getElementById('scopeList');
+    const empty = document.getElementById('scopeEmptyState');
+
+    if (!_scopeGrants.length) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    const seen = new Set();
+    const cards = [];
+
+    _scopeGrants.forEach(g => {
+      if (seen.has(g.id)) return;
+      const reciprocal = _scopeGrants.find(x =>
+        x.id !== g.id && x.ward_id === g.allowed_ward_id && x.allowed_ward_id === g.ward_id
+      );
+      if (reciprocal) {
+        seen.add(g.id); seen.add(reciprocal.id);
+        cards.push(renderMutualScopeCard(g, reciprocal));
+      } else {
+        seen.add(g.id);
+        cards.push(renderOneWayScopeCard(g));
+      }
+    });
+
+    list.innerHTML = cards.join('');
+  }
+
+  async function addScopeGrant() {
+    const wardId        = document.getElementById('sg-ward').value;
+    const allowedWardId = document.getElementById('sg-allowed-ward').value;
+    const reason         = document.getElementById('sg-reason').value.trim();
+    const mutual         = document.getElementById('sg-mutual').checked;
+
+    if (!wardId || !allowedWardId) { showToast('Select both a ward and a ward to search', 'error'); return; }
+    if (wardId === allowedWardId) { showToast('A ward cannot be granted access to itself', 'error'); return; }
+
+    const existsForward  = _scopeGrants.some(g => g.ward_id === wardId && g.allowed_ward_id === allowedWardId);
+    const existsBackward = _scopeGrants.some(g => g.ward_id === allowedWardId && g.allowed_ward_id === wardId);
+
+    const rowsToInsert = [];
+    if (!existsForward) rowsToInsert.push({ ward_id: wardId, allowed_ward_id: allowedWardId });
+    if (mutual && !existsBackward) rowsToInsert.push({ ward_id: allowedWardId, allowed_ward_id: wardId });
+
+    if (!rowsToInsert.length) {
+      showToast(mutual ? 'Both directions already granted' : 'That grant already exists', 'error');
+      return;
+    }
+
+    const saveBtn = document.getElementById('sg-save');
+    saveBtn.disabled = true; saveBtn.textContent = 'Adding…';
+    try {
+      const payload = rowsToInsert.map(r => ({
+        ...r,
+        reason: reason || null,
+        created_by: _currentAdminEmail || 'super_admin'
+      }));
+      const { data, error } = await sb.from('ward_search_scope').insert(payload).select();
+      if (error) throw error;
+
+      _scopeGrants.unshift(...data);
+      renderScopeStats();
+      renderScopeList();
+      document.getElementById('sg-ward').value = '';
+      document.getElementById('sg-allowed-ward').value = '';
+      document.getElementById('sg-reason').value = '';
+      document.getElementById('sg-mutual').checked = false;
+      showToast(mutual && rowsToInsert.length === 2 ? 'Mutual grant added' : 'Grant added');
+    } catch (e) {
+      showToast('Failed to add grant: ' + (e.message || e), 'error');
+    } finally {
+      saveBtn.disabled = false; saveBtn.textContent = 'Add grant';
+    }
+  }
+
+  async function revokeScopeGrant(id) {
+    const g = _scopeGrants.find(x => x.id === id);
+    if (!g) return;
+    if (!confirm(`Revoke ${wardNameById(g.ward_id)}'s access to ${wardNameById(g.allowed_ward_id)}'s data?`)) return;
+
+    try {
+      const { error } = await sb.from('ward_search_scope').delete().eq('id', id);
+      if (error) throw error;
+      _scopeGrants = _scopeGrants.filter(x => x.id !== id);
+      renderScopeStats();
+      renderScopeList();
+      showToast('Grant revoked');
+    } catch (e) {
+      showToast('Failed to revoke grant: ' + (e.message || e), 'error');
+    }
+  }
+
+  async function revokeMutualGrant(idA, idB) {
+    const gA = _scopeGrants.find(x => x.id === idA);
+    const gB = _scopeGrants.find(x => x.id === idB);
+    if (!gA || !gB) return;
+    if (!confirm(`Revoke mutual search access between ${wardNameById(gA.ward_id)} and ${wardNameById(gA.allowed_ward_id)}? This removes both directions.`)) return;
+
+    try {
+      const { error } = await sb.from('ward_search_scope').delete().in('id', [idA, idB]);
+      if (error) throw error;
+      _scopeGrants = _scopeGrants.filter(x => x.id !== idA && x.id !== idB);
+      renderScopeStats();
+      renderScopeList();
+      showToast('Mutual grant revoked');
+    } catch (e) {
+      showToast('Failed to revoke grant: ' + (e.message || e), 'error');
+    }
+  }
+
+  // ── Edit project modal ──
+  function populateWardSelect(selectedWardId) {
+    const sel = document.getElementById('pm-ward');
+    sel.innerHTML = _wards.map(w =>
+      `<option value="${w.id}" ${w.id === selectedWardId ? 'selected' : ''}>${w.ward_name}</option>`
+    ).join('');
+  }
+
+  function openEditProject(projectId) {
+    const p = _projects.find(x => x.id === projectId);
+    if (!p) return;
+    _editingProjectId = projectId;
+    document.getElementById('pm-name').value        = p.project_name || '';
+    document.getElementById('pm-month').value        = p.month || '';
+    document.getElementById('pm-year').value         = p.year || '';
+    document.getElementById('pm-description').value  = p.description || '';
+    populateWardSelect(p.ward_id);
+    document.getElementById('projectModalBackdrop').classList.add('open');
+  }
+
+  function closeProjectModal() {
+    document.getElementById('projectModalBackdrop').classList.remove('open');
+    _editingProjectId = null;
+  }
+
+  async function saveProjectEdit() {
+    if (!_editingProjectId) return;
+    const name  = document.getElementById('pm-name').value.trim();
+    const month = document.getElementById('pm-month').value.trim();
+    const year  = document.getElementById('pm-year').value.trim();
+    const desc  = document.getElementById('pm-description').value.trim();
+    const wardId = document.getElementById('pm-ward').value;
+
+    if (!name) { showToast('Project name is required', 'error'); return; }
+
+    const saveBtn = document.getElementById('pm-save');
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    try {
+      const { error } = await sb.from('projects').update({
+        project_name: name, month, year, description: desc || null, ward_id: wardId || null
+      }).eq('id', _editingProjectId);
+      if (error) throw error;
+
+      const p = _projects.find(x => x.id === _editingProjectId);
+      if (p) { p.project_name = name; p.month = month; p.year = year; p.description = desc; p.ward_id = wardId; }
+
+      showToast('Project updated');
+      renderProjectList();
+      closeProjectModal();
+    } catch (e) {
+      showToast('Save failed: ' + (e.message || e), 'error');
+    } finally {
+      saveBtn.disabled = false; saveBtn.textContent = 'Save changes';
+    }
+  }
+
+  // ── Cascading project delete ──
+  async function deleteProject(projectId) {
+    const p = _projects.find(x => x.id === projectId);
+    if (!p) return;
+
+    const groupIds     = _groupsByProject.get(projectId) || [];
+    const memberCount  = _memberCountByProject.get(projectId) || 0;
+    const waitingCount = _waitingCountByProject.get(projectId) || 0;
+
+    const warning = `Delete "${p.project_name}"? This permanently removes ${groupIds.length} group(s), `
+      + `${memberCount} member(s), ${waitingCount} waiting-list entrie(s), plus all linked site assignments, `
+      + `quotas and audit log entries for this project. This cannot be undone.`;
+    if (!confirm(warning)) return;
+    if (!confirm('Type OK to confirm — this is permanent and cannot be recovered.')) return;
+
+    try {
+      if (groupIds.length) {
+        const { error: mErr } = await sb.from('members').delete().in('group_id', groupIds);
+        if (mErr) throw mErr;
+        const { error: gErr } = await sb.from('groups').delete().in('id', groupIds);
+        if (gErr) throw gErr;
+      }
+      const { error: wErr } = await sb.from('waiting_list').delete().eq('project_id', projectId);
+      if (wErr) throw wErr;
+      const { error: sErr } = await sb.from('site_assignments').delete().eq('project_id', projectId);
+      if (sErr) throw sErr;
+      const { error: qErr } = await sb.from('quota').delete().eq('project_id', projectId);
+      if (qErr) throw qErr;
+      const { error: aErr } = await sb.from('worker_audit_log').delete().eq('project_id', projectId);
+      if (aErr) throw aErr;
+      const { error: pErr } = await sb.from('projects').delete().eq('id', projectId);
+      if (pErr) throw pErr;
+
+      _projects = _projects.filter(x => x.id !== projectId);
+      _groupsByProject.delete(projectId);
+      _memberCountByProject.delete(projectId);
+      _waitingCountByProject.delete(projectId);
+
+      showToast('Project and all linked data deleted');
+      renderProjectStats();
+      renderProjectList();
+    } catch (e) {
+      showToast('Delete failed: ' + (e.message || e), 'error');
+    }
+  }
+
+  // ── Cascading ward delete ──
+  async function deleteWard(wardId) {
+    const ward = _wards.find(w => w.id === wardId);
+    if (!ward) return;
+
+    const wardProjects = _projects.filter(p => p.ward_id === wardId);
+    const projectIds   = wardProjects.map(p => p.id);
+    const users        = _usersByWard.get(wardId) || [];
+
+    let groupCount = 0, memberCount = 0, waitingCount = 0;
+    projectIds.forEach(pid => {
+      groupCount   += (_groupsByProject.get(pid) || []).length;
+      memberCount  += _memberCountByProject.get(pid) || 0;
+      waitingCount += _waitingCountByProject.get(pid) || 0;
+    });
+
+    const warning = `Delete "${ward.ward_name}"? This permanently removes ${wardProjects.length} project(s), `
+      + `${groupCount} group(s), ${memberCount} member(s), ${waitingCount} waiting-list entrie(s), `
+      + `${users.length} ward user(s), plus all sites, special workers, quotas, site assignments, audit `
+      + `log entries and search-scope grants linked to this ward. Historical archive records are kept. This cannot be undone.`;
+    if (!confirm(warning)) return;
+    if (!confirm('Type OK to confirm — this permanently deletes the entire ward and cannot be recovered.')) return;
+
+    try {
+      // groups tied to the ward either directly or through one of its projects
+      let orClause = `ward_id.eq.${wardId}`;
+      if (projectIds.length) orClause += `,project_id.in.(${projectIds.join(',')})`;
+      const { data: groupRows, error: gFetchErr } = await sb.from('groups').select('id').or(orClause);
+      if (gFetchErr) throw gFetchErr;
+      const groupIds = (groupRows || []).map(g => g.id);
+// Detach archive records instead of deleting them (per the stated retention policy)
+const { error: paErr } = await sb.from('project_archive').update({ ward_id: null }).eq('ward_id', wardId);
+if (paErr) throw paErr;
+
+// Attendance has hard FKs to members/groups/projects with no cascade,
+// so its rows must go before those parent rows are deleted.
+if (groupIds.length) {
+  const { error: attErr1 } = await sb.from('attendance').delete().in('group_id', groupIds);
+  if (attErr1) throw attErr1;
+}
+if (projectIds.length) {
+  const { error: attErr2 } = await sb.from('attendance').delete().in('project_id', projectIds);
+  if (attErr2) throw attErr2;
+}
+// catch any attendance rows tagged with this ward but not caught above
+const { error: attErr3 } = await sb.from('attendance').delete().eq('ward_id', wardId);
+if (attErr3) throw attErr3;
+      if (groupIds.length) {
+        const { error: mErr } = await sb.from('members').delete().in('group_id', groupIds);
+        if (mErr) throw mErr;
+        const { error: gErr } = await sb.from('groups').delete().in('id', groupIds);
+        if (gErr) throw gErr;
+      }
+      // catch any member rows tagged with this ward but not caught above
+      const { error: mErr2 } = await sb.from('members').delete().eq('ward_id', wardId);
+      if (mErr2) throw mErr2;
+
+      // rows linked via project_id (covers cases where ward_id wasn't set consistently)
+      if (projectIds.length) {
+        const { error: wl1 } = await sb.from('waiting_list').delete().in('project_id', projectIds);
+        if (wl1) throw wl1;
+        const { error: sa1 } = await sb.from('site_assignments').delete().in('project_id', projectIds);
+        if (sa1) throw sa1;
+        const { error: q1 } = await sb.from('quota').delete().in('project_id', projectIds);
+        if (q1) throw q1;
+        const { error: al1 } = await sb.from('worker_audit_log').delete().in('project_id', projectIds);
+        if (al1) throw al1;
+      }
+
+      // remaining rows linked directly by ward_id
+      const { error: wlErr } = await sb.from('waiting_list').delete().eq('ward_id', wardId);
+      if (wlErr) throw wlErr;
+      const { error: saErr } = await sb.from('site_assignments').delete().eq('ward_id', wardId);
+      if (saErr) throw saErr;
+      const { error: qErr } = await sb.from('quota').delete().eq('ward_id', wardId);
+      if (qErr) throw qErr;
+      const { error: alErr } = await sb.from('worker_audit_log').delete().eq('ward_id', wardId);
+      if (alErr) throw alErr;
+      const { error: swErr } = await sb.from('special_workers').delete().eq('ward_id', wardId);
+      if (swErr) throw swErr;
+      const { error: siErr } = await sb.from('sites').delete().eq('ward_id', wardId);
+      if (siErr) throw siErr;
+      const { error: wuErr } = await sb.from('ward_users').delete().eq('ward_id', wardId);
+      if (wuErr) throw wuErr;
+      // remove any search-scope grants that reference this ward on either side
+      const { error: ssErr } = await sb.from('ward_search_scope').delete()
+        .or(`ward_id.eq.${wardId},allowed_ward_id.eq.${wardId}`);
+      if (ssErr) throw ssErr;
+      const { error: pErr } = await sb.from('projects').delete().eq('ward_id', wardId);
+      if (pErr) throw pErr;
+      const { error: wErr } = await sb.from('wards').delete().eq('id', wardId);
+      if (wErr) throw wErr;
+
+      // local state cleanup
+      _wards = _wards.filter(w => w.id !== wardId);
+      _usersByWard.delete(wardId);
+      _projects = _projects.filter(p => p.ward_id !== wardId);
+      projectIds.forEach(pid => {
+        _groupsByProject.delete(pid);
+        _memberCountByProject.delete(pid);
+        _waitingCountByProject.delete(pid);
+      });
+      _scopeGrants = _scopeGrants.filter(g => g.ward_id !== wardId && g.allowed_ward_id !== wardId);
+
+      showToast('Ward and all linked data deleted');
+      renderStats();
+      renderWardList();
+      renderProjectStats();
+      renderProjectList();
+      populateScopeWardSelects();
+      renderScopeStats();
+      renderScopeList();
+    } catch (e) {
+      showToast('Delete failed: ' + (e.message || e), 'error');
+    }
+  }
+
+  // ── Edit ward modal ──
+  function openEditWard(wardId) {
+    const w = _wards.find(x => x.id === wardId);
+    if (!w) return;
+    _editingWardId = wardId;
+    document.getElementById('wm-name').value     = w.ward_name || '';
+    document.getElementById('wm-location').value = w.location || '';
+    document.getElementById('wm-district').value = w.district || '';
+    document.getElementById('wm-email').value    = w.contact_email || '';
+    document.getElementById('wm-phone').value    = w.contact_phone || '';
+    document.getElementById('wardModalBackdrop').classList.add('open');
+  }
+
+  function closeWardModal() {
+    document.getElementById('wardModalBackdrop').classList.remove('open');
+    _editingWardId = null;
+  }
+
+  async function saveWardEdit() {
+    if (!_editingWardId) return;
+    const name     = document.getElementById('wm-name').value.trim();
+    const location = document.getElementById('wm-location').value.trim();
+    const district  = document.getElementById('wm-district').value.trim();
+    const email    = document.getElementById('wm-email').value.trim();
+    const phone    = document.getElementById('wm-phone').value.trim();
+
+    if (!name)     { showToast('Ward name is required', 'error'); return; }
+    if (!location) { showToast('Location is required', 'error'); return; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('Enter a valid contact email', 'error'); return;
+    }
+
+    const saveBtn = document.getElementById('wm-save');
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+    try {
+      const { error } = await sb.from('wards').update({
+        ward_name: name, location, district: district || null,
+        contact_email: email, contact_phone: phone || null,
+        updated_at: new Date().toISOString()
+      }).eq('id', _editingWardId);
+      if (error) throw error;
+
+      const w = _wards.find(x => x.id === _editingWardId);
+      if (w) {
+        w.ward_name = name; w.location = location; w.district = district;
+        w.contact_email = email; w.contact_phone = phone;
+      }
+
+      showToast('Ward updated');
+      renderWardList();
+      populateScopeWardSelects();
+      renderScopeList();
+      document.getElementById('card-' + _editingWardId)?.classList.add('open');
+      closeWardModal();
+    } catch (e) {
+      showToast('Save failed: ' + (e.message || e), 'error');
+    } finally {
+      saveBtn.disabled = false; saveBtn.textContent = 'Save changes';
+    }
+  }
+
+  // ── Actions ──
+  async function updateWardStatus(wardId, status) {
+    const { error } = await sb.from('wards').update({ status, updated_at: new Date().toISOString() }).eq('id', wardId);
+    if (error) { showToast('Failed to update status: ' + error.message, 'error'); return; }
+    const w = _wards.find(x => x.id === wardId);
+    if (w) w.status = status;
+    showToast('Ward status updated to ' + status);
+    renderStats();
+    renderWardList();
+    document.getElementById('card-' + wardId)?.classList.add('open');
+  }
+
+  async function updateUserRole(userId, role) {
+    const { error } = await sb.from('ward_users').update({ role }).eq('id', userId);
+    if (error) { showToast('Failed to update role: ' + error.message, 'error'); return; }
+    for (const arr of _usersByWard.values()) {
+      const u = arr.find(x => x.id === userId);
+      if (u) { u.role = role; break; }
+    }
+    showToast('Role updated to ' + roleLabel(role));
+  }
+
+  async function removeUser(userId, wardId) {
+    if (!confirm('Remove this user from the ward?')) return;
+    const { error } = await sb.from('ward_users').delete().eq('id', userId);
+    if (error) { showToast('Failed to remove user: ' + error.message, 'error'); return; }
+    const arr = _usersByWard.get(wardId) || [];
+    _usersByWard.set(wardId, arr.filter(u => u.id !== userId));
+    showToast('User removed');
+    renderStats();
+    renderWardList();
+    document.getElementById('card-' + wardId)?.classList.add('open');
+  }
+
+  async function refreshAll() {
+    _wards = await loadWards();
+    await loadAllWardUsers();
+    renderStats();
+    renderWardList();
+
+    _projects = await loadProjects();
+    await loadProjectAggregates();
+    renderProjectStats();
+    renderProjectList();
+
+    _scopeGrants = await loadScopeGrants();
+    populateScopeWardSelects();
+    renderScopeStats();
+    renderScopeList();
+
+    showToast('Refreshed');
+  }
+
+  // ── Wire controls ──
+  document.getElementById('searchInput').addEventListener('input', e => {
+    _searchTerm = e.target.value.trim().toLowerCase();
+    renderWardList();
+  });
+  document.getElementById('filterChips').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    document.querySelectorAll('#filterChips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    _statusFilter = chip.dataset.status;
+    renderWardList();
+  });
+
+  document.getElementById('projectSearchInput').addEventListener('input', e => {
+    _projectSearchTerm = e.target.value.trim().toLowerCase();
+    renderProjectList();
+  });
+
+  document.getElementById('tabNav').addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+
+  document.getElementById('pm-cancel').addEventListener('click', closeProjectModal);
+  document.getElementById('pm-save').addEventListener('click', saveProjectEdit);
+  document.getElementById('projectModalBackdrop').addEventListener('click', e => {
+    if (e.target.id === 'projectModalBackdrop') closeProjectModal();
+  });
+
+  document.getElementById('wm-cancel').addEventListener('click', closeWardModal);
+  document.getElementById('wm-save').addEventListener('click', saveWardEdit);
+  document.getElementById('wardModalBackdrop').addEventListener('click', e => {
+    if (e.target.id === 'wardModalBackdrop') closeWardModal();
+  });
+
+  document.getElementById('sg-save').addEventListener('click', addScopeGrant);
+
+  async function init() {
+    const allowed = await checkAccess();
+    if (!allowed) { showGate(); return; }
+
+    _wards = await loadWards();
+    await loadAllWardUsers();
+    renderStats();
+    renderWardList();
+
+    _projects = await loadProjects();
+    await loadProjectAggregates();
+    renderProjectStats();
+    renderProjectList();
+
+    _scopeGrants = await loadScopeGrants();
+    populateScopeWardSelects();
+    renderScopeStats();
+    renderScopeList();
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+  }
+
+  init();
+</script>
+</body>
+</html>
